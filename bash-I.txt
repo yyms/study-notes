@@ -1,0 +1,157 @@
+
+bash脚本编程-I
+
+1.变量
+局部变量:variable_name=value
+        declare variable_name=value
+全局变量:export VARIABLE_NAME=value
+        declare -x VARIABLE_NAME=value
+局部变量只被当前的shell使用，而全局变量可以被当前shell和其派生的所有子进程所使用
+
+2.脚本运行参数
+$1 $2 $3 ...
+$*　所有的位置参数
+$#　位置参数的个数
+
+3.bash支持数组语法，可以创建数组列表，并用下标来访问．数组使用declare
+-a来声明
+[bash]declare -a arr_name=("aa" "bb" 234)
+echo ${arr_name[0]} ${arr_name[1]} ${arr_name[2]}[/bash]
+
+4.命令替换：可以提取某个命令的输出.bash支持$()这种新的语法，避免和单引号混淆
+[bash]echo "First: "`date`
+echo "Second: "$(date)
+First: Sat Jul 7 15:06:14 CST 2012
+Second: Sat Jul 7 15:06:14 CST 2012[/bash]
+
+5.算术运算 (())就可以了
+((n = 4 + 3))
+((n++))
+整数的关系运算符 -eq -ne -gt -lt -ge -le
+字符串关系运算   = !=
+注意：在后面的bash里面，关系运算符使用内置的test命令来测试数字和字符串，语法同C语言类似
+== != && || ! > < (发现>= <=这类的东西不能干．还是使用-le -gt吧)
+
+6.条件语句
+a)if 语句
+[bash]if $( whoami | grep "nicol" > /dev/null )
+then
+	echo "Hello, nicol!"
+else
+	echo "Who are you?"
+fi[/bash]
+注意：其中的if后面的条件子句，可以是
+command    //命令不要有输出，否则会提示命令输出的东西没法执行
+[[ expression  ]]  //新的测试命令使用[[ expre ]]来表示，同时向后兼容[]这种模式
+(())       //这里面直接可以表达式的计算，0表示假，非0表示真
+[bash]if (( 5 - 5 )) ; then 
+	echo "No here"
+elif (( 5 - 4 )); then
+	echo "Right!"
+fi[/bash]
+b)case语句
+[bash]color="green"
+case $color in
+	red)
+		echo "\$color is red."
+		;;
+	green|blue)
+		echo "\$color is green or blue"
+		;;
+	*)
+		echo "what color?"
+		;;
+esac[/bash]
+
+7.循环语句 while until for select
+a)while
+[bash]var=0
+while [[ var -lt 10 ]]
+do
+	((var++))
+	echo "now var is $var"
+done[/bash]
+b)until 跟while类似，条件相反
+[bash]var=0
+until [[ var -gt 10 ]]
+do
+	((var++))
+	echo "now var is $var"
+done[/bash]
+c)for for后面一般是一个循环列表，遍列这个列表里面的值
+[bash]for color in red green blue 
+do
+	echo "\$color is $color"
+done[/bash]
+d)select select环事迹是提供一条提示信息和多个选项，然后用户选择，并将
+接过保存在内置的特定变量REPLY中.select通常和case使用一块
+e)循环中的break continue语句
+[bash]select item in red green blue exit
+do
+    echo "\$item is $item"
+	case $item in
+		red)
+			echo "-->RED"
+			;;
+		green|blue)
+			echo "-->GREEN/BLUE"
+			;;
+		exit)
+			echo "EXITING"
+			break
+			;;
+		*)
+			echo "???"
+			;;
+	esac
+done
+echo "Finishing..."[/bash]
+下面是输出
+[bash]1) red
+2) green
+3) blue
+4) exit
+#? 2
+$item is green
+-->GREEN/BLUE
+#? 4
+$item is exit
+EXITING
+Finishing...
+[nicol@dream llee]$ [/bash]
+
+8.函数
+[bash]function func_call() {
+	echo "in the func_call..."
+}[/bash]
+函数调用 func_call
+
+9.bash的数组使用方法
+原来的sh里面都是使用位置参数来使用数组的，现在可以数组变量了哈！
+这里主要是数组的一些特殊变量，可以方便的使用数组元素
+${arr_name[@]}或者#{arr_name[*]} 表示所有的数组元素　
+${#arr_name[@]}或者${#arr_name[*]}表示数组的参数元素个数
+这样的话，数组就可以同for,select等语句方便搭配了！
+[bash]declare -a arr_name=("red" "green" "blue" "black")
+
+echo "arr_name length: ${#arr_name[@]}"  # ${#arr_name[*]
+echo "arr_name item: ${arr_name[@]}" # ${arr_name[*]}
+
+for item in ${arr_name[*]}
+do
+	echo "current item: $item"
+done[/bash]
+
+10.shell中的正则表达式：
+对于UNIX/Linux，很多程序的流派比较的多，所以也显的有些乱．比如正则表达
+式，在很多的工具中是不一样的，下面是shell中的元字符和正则表达
+\ 按照字面解释后面的字符，比如\$就解释为$而不是变量解析
+& 进程后台处理
+$ 替换变量
+? 匹配单个字符
+[abc] 匹配字符列表中的一个
+[!abc] 匹配除字符列表外的字符
+* 匹配任意0个或者多个字符
+(cmd) 在子shell中执行命令
+{cmd} 在当前shell中执行命令
+

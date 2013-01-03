@@ -1,0 +1,372 @@
+vim的python自动补全的设置
+首先下载pydiction-1.2.zip文件，解压之后，将complete-dict复制到~/.vim/pydiction目录下，然后将
+python_pydiction.vim复制到~/.vim/plugin目录下，设置.vimrc，添加
+filetype plugin on
+let g:pydiction_location="~/.vim/pydiction/complete-dict"
+
+1.raw_input()
+可以提示输入一个字符串返回，int等数据类型可以对读入的字符串进行格式化
+num=(int)(raw_input("Please input an integer."))
+UNIX下标准输入如果捕获到Ctrl-D，就引发EOFError
+
+2.python 
+运算符 + - * / % // **
+逻辑运算符 and or not
+大小比较 甚至支持 3<4<5 True False
+不支持C语言的自增自减运算
+
+3.python数据类型
+python 是动态类型语言，不需要事先声明数据类型
+数字类型 int long bool(True False) float(E e) complex(j J)
+字符串 单引号 双引号 三引号 可用[] [:] 切片，0开始索引，最后一个索引-1，三引号的字符串可以夸行
+列表－－可改变     ［］
+元组－－不可以改变 （）
+字典－－key-value {-:- , -:-}
+
+4.逻辑语句
+条件语句可以使用 and not or 等进行连接
+if expression1:
+  xxxxx
+elif expression2:
+  yyyyy
+else:
+  zzzz
+
+（多重的比较实际可以采用in元组的方式来简化哦～）
+三元擦作符max = x if x > y else y
+
+
+while expression:
+  xxxxx
+
+for item in xxxxx
+  zzzzz
+
+for后面接受的是可迭代的语句
+可以是列表、元组、
+range(3)      0 1 2
+range(1,3)    1 2
+range(1,3,2)  1
+总结起来就是range([start,]stop[,stop])
+ 
+所以使用for来进行索引的一个简单的方法就是
+for i in range(len(obj)):
+当然最好的方法是
+for nameIndex,name in enumerate(namelist):
+
+print 语句最后使用 ，可以消除默认添加的换行符号，也可以单独使用一个空print语句产生一个换行
+
+5.文件操作
+handle = open(file_name,access_mode='r')
+  r读取 w写入 a添加 ＋读写 b二进制访问
+
+6.
+python的赋值语句不会返回值，但是可以进行链式赋值和增量赋值
+python的交换不需要中间临时变量 x,y = y,x 就可以解决
+
+7.python程序除了编写注释之外，还提供了一种__doc__的机制，在模块，类声明或者函数声明中，第一个没有
+赋值的字符串值可以使用属性obj.__doc__来访问
+
+8.下面是一个python完整的模板例子
+  1 #!/usr/bin/python
+  2 
+  3 '''this is a python test!'''
+  4 
+  5 import sys
+  6 import os
+  7 
+  8 debug = True
+  9 
+ 10 class FooClass(object):
+ 11         "Foo class"
+ 12         pass
+ 13 
+ 14 def test():
+ 15         "test function"
+ 16         foo = FooClass()
+ 17 
+ 18         if debug:
+ 19                 print 'ran test()'
+ 20 
+ 21 if __name__ == "__main__":
+ 22         test()
+其实，在python中，很多的代码都是以模块的方式呈现的，但是问题是，所有源文件的没有缩进的顶级代码都会被
+自动执行，无论是否是主程序中的还是作为模块被别人调用的，所以在python中，代码尽量都封装到类和函数中去，
+而在主程序中采用顶级执行代码
+__name__ 系统变量是一个很重要的变量，如果程序是以模块导入，那么__main__就是模块名字，如果程序是被直接
+执行的话，__name__就是__main__
+
+9.在python中，整数和字符串一样是不可变对象，系统可以高速缓存它们，所以两个整数如果值是一样的，它们可能是
+指向同一个的对象。当然其中一个的值改变之后，它们的引用关系就自动解除了，但是浮点数据是不会公用的
+比较两个引用是不是指向同一个对象可以使用 is  is not 关键字
+a is b  id(a) == id(b)
+a is not b id(a) != id(b)
+
+10.对于标准内建基本类型，拥有标准内建函数
+cmp(obj)比较是对象的比较，不管是不是用户自定义类型
+repr(obj)返回一个对象的字符串表示 str(obj) type(obj)返回type对象
+eval()求值运算可以重新得到该对象
+ ojb == eval(repr(obj))
+isinstance(obj,type)用于对象是不是某种类型，等于 type() == type()
+print isinstance(4,types.IntType) True
+
+11.Python 数字
+整型，长整型，布尔类型，双精度浮点，十进制浮点，复数
+其中长整形和整型正在同一，而由于Python不是强制类型的，所以对外部是不可见的
+复数的性质 obj.real obj.imag obj.conjugate
+
+12.数字类型
+int() long() float() complex() bool()  complex(str)-complex(real,imag)
+功能函数 abs() 对于复数来说，就是求的模
+coerce() 进行类型转换，将两个参数转换成同一个类型，返回转后的元组
+divmod() 将除法和取模结合起来
+** pow() 指数函数
+round()  取整，还可以设定第二个参数，取成小数的精度
+
+13.整数函数
+otc hex 转换给定的整数成8进制或者十六进制，返回成字符串类型
+chr ord 分别将整数转换成ASCII，和把字符转换成整数
+bool类型在数学运算中会被变成0,1
+
+14.十进制浮点数
+from decimal import Decimal
+a = Decimal('1.2324')
+其他运算符号
+<< >> & | ^
+
+15.序列（包含：字符串、列表、元组）
+obj [not] in seq
+seq[index]
+seq[index1:index2] seq[index1,index2,step]
+seq*expr   expr*seq  重复expr次
+seq1+seq2  连接
+转换工厂函数
+list(iter)
+str(obj)
+unicode(obj)   basestring()是str和unicode的工厂类，不能被实例化
+tuple(iter)
+序列的内建函数
+enumerate(iter)返回一个enumerate对象
+for i,item in enumerates(a):
+  print i,item
+len(seq)
+max(iter,key=None) max(arg0,arg1...,key=None)  如果key,那么key必须是可以传递给sort的回调函数
+min(iter,key=None) min(arg0,arg1...,key=None)  如果key,那么key必须是可以传递给sort的回调函数
+reversed(seq) 返回一个逆序访问的迭代器
+sorted(iter,func=None,key=None,reversed=False)返回一个有序的列表
+字符串自动拥有的字符
+import string
+string.ascii_uppercase
+string.ascii_lowercase
+string.letters
+string.digits
+string.upper(str) string.lower(str) 大小写
+出于性能考虑，字符串不建议使用+ ，而是格式化或者 join 函数
+在字符串前面加上r字符，表示不对字符串进行转换，原来格式字符输出 r'\n\t'..
+
+16.Python 字典
+创建字典
+｛key1:value1, key2:value2, key3:value3｝
+dict((['key1','value1'],['key2','value2'],['key3','value3'])) --工厂方法
+dict(key1='value1',key2='value2')
+fdisk.copy()
+{}.fromkeys((key1,key2,key3)[,value])
+遍历字典
+for key in fdisk:
+  print key,fdisk[key]
+in not in 来判断是否存在键
+print "%(key1)s %(key2)s %(key3)s" %fdisk  这是在字符串格式化的时候使用字典的简单方法
+删除
+del fdisk['key1']
+fdisk.clear()
+del fdisk
+fdisk.pop('key1') 删除key1,并返回key1的值
+len(fdisk)返回键值对的个数
+dict.get(key,default=None) 返回key对应的值，如果不存在返回default
+dict.setddefault(key,default=None)
+dict.items() dict.keys() dict.values()
+dict.iter()返回一个迭代而非列表
+dict.update(dict2)将dict2添加到dict中，重复键的值会被dict2新值所替代
+
+17.集合
+set() frezonset()工厂方法，前者是可变集合，集合可以增加删减等，但是是不可以hash的，后者可以hash
+in not in set.add(obj) set.remove(obj) set.update(t) set.discard(obj)删除对象
+set.clear() set.pop()删除任意的一个对象，并返回它
+集合类操作 | & - ^(对差分，不能同时属于两个集合的元素)
+
+18.
+sorted() zip()	       返回列表
+enumerate() reversed() 返回迭代
+
+19
+Python中的pass语句，相当于空语句，起到占位的作用
+
+20.生成器
+[expr for iter_val in iterable if cond_expr]
+(expr for iter_val in iterable if cond_expr)
+举例：
+[x for x in seq if x % 2]
+x_pairs = ((i,j) for i in rows for j in cols())
+
+20.迭代器
+实际是一个有next()方法的对象，for其实可以自动调用next()方法。当所有的条目都取出来之后，就会引发一个
+StopIteration异常，表示迭代完成
+iter()工厂函数可以创建迭代
+其中，序列、字典(键)和文件(每一行)都是可以迭代的
+for item in objs:
+
+21.
+读取文件，对于有的文件，应该快速读取，然后放弃句柄
+f = file(file_name,'r')
+lines = f.readlines()
+f.close()
+for line in lines:
+        print line,
+-----------
+f = open(file_name,'r')
+for line in f:
+        print line,
+f.close()
+
+22.
+open() file()
+其实相同的，一般前者用于读写文件， 后者用于处理文件对象
+read() readline() readlines() 还有就是使用迭代器的方法,for line in file:
+write() writelines() 不会写入换行符，上面的读取会读取保存换行符号
+data = [line.strip() for line in f.readlines()]    #strip用于出去末尾的换行
+seek()文件指针偏移
+truncate() flush() tell() fileno()
+sys.stdin sys.stdout sys.stderr
+sys.argv len(sys.argv)
+
+f = open(file_name,'r')
+for line in f:
+       sys.stdout.write(line.strip());
+f.close()
+
+os模块的文件处理 
+wwwwwwwwwwwwP333
+
+23.python
+python的函数，如果没有返回，那么默认就返回None，其实，python还可以返回多个类型
+>>> def foo():
+...     return 'abc',2,['fs',2],'fdsf'
+>>> x,y,z = foo()
+实际返回的是一个元组
+
+函数或者方法的装饰器
+class MyClass(object):
+  @staticmethod
+  def staticFoo():
+    ...
+将函数名赋值，实际也是函数的引用，bar=foo 以后就可以用bar代替foo调用函数了
+甚至可以把函数名作为形参传递到函数中，然后在函数中调用其他的函数
+可变长度的函数参数
+  3 def argstst(x,y=3,*varTuple):
+  4         print 'x = ',x
+  5         print 'y = ',y
+  6         for i,item in enumerate(varTuple):
+  7                 print i,'->',item
+  8 
+  9 argstst(1,32,3,543)
+上面剩下的参数作为元组形式传递到函数当中
+可变参数还可以使用字典，这样，参数名和值作为字典中的键值对应出现
+ 11 def argstst2(x,y=3,**varDict):
+ 12         print 'x = ',x
+ 13         print 'y = ',y
+ 14         for i in varDict:
+ 15                 print i,'->',varDict[i]
+ 16 
+ 17 argstst2(1,32,key1='value1',key2='value2')
+另外的调用方式 argstst2(1,32,**{'key1':'value1','key2':'value2'})
+
+lambda函数
+true = lambda : True
+asum = lambda x, y = 2 : x + y
+
+wwwwwwwwwP419 内建函数
+
+24.模块
+import 可以导入模块，模块有自己的搜索路径
+sys.path 表示了系统的搜索路径
+sys.path.append() 可以添加路径
+sys.modules字典提示了当前导入模块的信息
+模块导入的推荐顺序：
+标准库模块  第三方模块 自定义模块
+import xxx as yyyy
+from xxx import zzzz (as yyyy)
+模块可能被直接或者间接地导入多次，但是只会被加载一次
+zipimport还可以导入zip压缩的模块，而且如果模块被打包，还可以导入包或者模块，包模块之间用.来连接、
+
+25.面向对象编程
+编程约定：类名首字母大写，属性小写，而方法一般使用匈牙利命名法
+任何一个类所具有的属性
+__name__  __doc__ __bases__父类所构成的元组 __dict__类的属性 __module__所在的模块 __class__
+访问类的属性，会首先在__dict__中寻找，如果没有找到，会从左到右顺序到基类的字典中寻找，修改属性不会影响到
+基类的字典属性
+一般不建议重载__del__()析构函数，如果要的话，一定要记得调用基类的析构函数
+Python允许在运行过程中创建 实例属性
+实例属性可以和类属性同名，这时候实例引用将会屏蔽类属性而使用实例属性
+  4 class Person:
+  5         @staticmethod
+  6         def printstatic():
+  7                 print 'hello static'
+  8 
+  9         @classmethod
+ 10         def printclass(self):
+ 11                 print 'hello class'
+ 12 
+ 13 Person.printstatic()
+ 14 Person().printclass()
+Python允许多重继承
+父类的__doc__属性不会被子类继承，而父类的构造函数会被子类自动继承，但是如果子类重载了够找函数
+那么就必须显式调用父类的构造函数了
+  4 class Person(object):
+  5         def foo(self):
+  6                 print 'I am parent foo'
+  7 
+  8 class Cld(Person):
+  9         def foo(self):
+ 10                 super(Cld,self).foo()
+ 11                 #Person.foo(self)
+ 12                 print 'I am child foo'
+ 13 
+ 14 c = Cld()
+ 15 c.foo()
+上面是使用super方法调用基类的对象方法，super只能用于新式类，就是所有类都是继承类object
+
+内建函数
+issublcass(sub,sup) 检测类的关系
+isinstance(obj,class) 检测是否是一个对象，或者子类的一个对象
+属性函数族
+hasattr() getattr() setattr() delattr()
+dir()返回对象属性的一个列表 vars()返回对象属性的一个字典
+类中的属性或者方法，默认都是公共的，可以通过加单下划线或者双下划线开头的方式来进行保护，防止
+import语句被外部导入使用
+
+
+                 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

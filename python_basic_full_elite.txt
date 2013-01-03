@@ -1,0 +1,568 @@
+#############################################################
+#if-elif-else
+number = 25
+guess = int(raw_input('Please input in integer:'))
+
+if guess == number:
+	print 'You got it!'
+elif guess < number:
+	print 'Less than it!'
+else:
+	print 'Larger than it!'
+
+#############################################################
+#while-(else)
+number = 25
+running = True
+
+while running:
+	guess = int(raw_input('Please input in integer:'))
+
+	if guess == number:
+		print 'You got it!'
+		running = False
+	elif guess < number:
+		print 'Less than it!'
+	else:
+		print 'Larger than it!'
+else:
+	print 'The loop is over!'
+
+#############################################################
+#for 2,3
+for i in range(1,7,3):
+	print i
+else:
+	print 'The loop 1 is over!' #Excute only once
+
+for i in range(1,7):
+	print i
+else:
+	print 'The loop 2 is over!' #Excute only once
+
+#############################################################
+#break
+while True:
+	s = raw_input('Please input some string:')
+
+	if s == 'quit':
+		break
+	print 'You input is ',s,len(s)
+
+#############################################################
+#contiue
+while True:
+	s = raw_input('Please input some string:')
+
+	if s == 'quit':
+		break
+
+	if len(s) < 3:
+		print 'Your input str should not less than 3'
+		continue
+
+	print 'You input is ',s,len(s)
+
+#############################################################
+#func test
+def printMax(a, b): 	#define function
+	print 'For a = ',a,' b = ',b,','
+	if a > b:
+		print 'Max is a:' , a
+	elif a < b:
+		print 'Max is b:' , b
+	else:
+		print 'a equals b'
+
+printMax(3, 4) 	#call function
+
+x = 5
+y = 2
+
+printMax(x, y) 	#call function
+
+#############################################################
+#local param
+def func(x): 	
+	print 'x in func is ',x 	#2
+	x = 3 	#change local to 3
+	print 'x changed in local, x is ',x 	#3
+
+x = 1
+
+print 'x original is ',x 	#1
+
+func (2)
+
+print 'after change, x still is ',x #1
+
+#############################################################
+#global param
+def func(): 
+	global x
+
+	print 'x in func is ',x #1
+	x = 3 	#change local to 3
+	print 'x changed in local, x is ',x #3
+
+x = 1
+
+print 'x original is ',x #1
+
+func ()
+
+print 'after change, global x now is ',x #3
+
+#############################################################
+#default param value
+def say(message, times = 1):  #default params must at last
+	print message * times
+
+say("Hello")
+say("World",5) #print World for 5 times
+
+#############################################################
+#default param value 2
+def func(a, b=3, c=5):  #default params must at last
+	print 'a, b, c is ',a ,b ,c
+
+func(1, c=12)
+#get 1,3,12
+
+#############################################################
+#function return value
+def Max(a, b): 	
+	if a > b:
+		return a
+	else:
+		return b
+
+print Max(3, 4) 	#call function
+
+#############################################################
+#function docs
+def Max(a, b): 	#define function
+	'''Prints the maximum of two integers.
+
+	The two values must be integers.'''
+
+	if a > b:
+		return a
+	else:
+		return b
+
+print Max(3, 4) 	#call function
+print Max.__doc__
+
+help(Max)
+
+#############################################################
+#using modules
+import sys
+
+print 'The command arguments for this program are:'
+for i in sys.argv: #first is the execute cmd
+	print i
+
+print '\nThe Python PATH is', sys.path, '\n'
+
+#############################################################
+#define mymodule
+#!/usr/local/bin/python
+
+def sayHello():
+	print 'Hello from mymodule speaking.'
+
+version = '0.47(c)'
+#End of mymodule
+
+#module test file
+import mymodule
+
+mymodule.sayHello()
+
+print 'Version', mymodule.version
+
+#decrepated using module
+from mymodule import sayHello, version
+
+sayHello()
+
+print 'Version', version
+
+#############################################################
+#using list 列表
+#可以对列表添加删除等操作，列表是可变数据类型
+shop_list = ['apple','mango','carrot','banana']
+
+print 'I have',len(shop_list),'item(s) to purchase';
+
+print 'These item(s) are:'
+for item in shop_list:
+	print item, #',' can del the default \n
+
+print '\nI also have to buy rice'
+shop_list.append('rice');
+print 'My shop list now is:',shop_list
+
+print '\nSort the shop list now...'
+shop_list.sort();
+print 'Sorted shop list is',shop_list
+
+#output result =>
+I have 4 item(s) to purchase
+These item(s) are:
+apple mango carrot banana 
+I also have to buy rice
+My shop list now is: ['apple', 'mango', 'carrot', 'banana', 'rice']
+
+Sort the shop list now...
+Sorted shop list is ['apple', 'banana', 'carrot', 'mango', 'rice']
+
+#############################################################
+#using tuple 使用元组，是一种不能改变的数据类型
+zone = ('wolf','elephant','penguin')
+print 'There are',len(zone),'elements in zone.' #3
+print 'The list is:',zone
+
+new_zone = ('monkey','dolphin',zone)
+print 'There are',len(new_zone),'elements in new_zone.' #3
+print 'The list is:',new_zone
+
+print 'The last animal<zone[len(zone)-1]> in zone is',zone[len(zone)-1]
+print 'The last animal<new_zone[len(new_zone)-1]> in zone is',new_zone[len(zone)-1]
+print 'The last animal<new_zone[2][2]> in new_zone is',new_zone[2][2]
+
+#output result =>
+There are 3 elements in zone.
+The list is: ('wolf', 'elephant', 'penguin')
+There are 3 elements in new_zone.
+The list is: ('monkey', 'dolphin', ('wolf', 'elephant', 'penguin'))
+The last animal<zone[len(zone)-1]> in zone is penguin
+The last animal<new_zone[len(new_zone)-1]> in zone is ('wolf', 'elephant', 'penguin')
+The last animal<new_zone[2][2]> in new_zone is penguin
+
+#############################################################
+#using tuple 2
+age = 24
+name = 'taozj'
+
+print '%s is %d years old'%(name,age)
+print 'Why is %s playing with python'%name
+
+#############################################################
+#using dictionary
+#字典的键是不可以改变的，而且必须是唯一的，值是可变的
+ab = {'taozj':'taozj@live.com',
+	'taozhijiang':'taozhijiang@gmail.com',
+	'taozhijiangscu':'taozhijiangscu@126.com'}
+
+print 'There are %d contacts in the adress-book.'%len(ab)
+print 'The contact list is:'
+for name, address in ab.items():
+	print 'Contact %s at %s'%(name,address)
+
+print 
+
+print 'The address for taozhijiang is %s.'%ab['taozhijiang']
+
+print 'Changing the address for taozhijiang...'
+ab['taozhijiang'] = 'taozj@live.com'
+print 'The address for taozhijiang now is %s.'%ab['taozhijiang']
+
+#if 'taozj' in ab:
+print 'Checking whether taozj is in address book'
+if ab.has_key('taozj'):
+	print 'taozj is at %s'%ab['taozj']
+
+#output result=>
+There are 3 contacts in the adress-book.
+The contact list is:
+Contact taozj at taozj@live.com
+Contact taozhijiang at taozhijiang@gmail.com
+Contact taozhijiangscu at taozhijiangscu@126.com
+
+The address for taozhijiang is taozhijiang@gmail.com.
+Changing the address for taozhijiang...
+The address for taozhijiang now is taozj@live.com.
+Checking whether taozj is in address book
+taozj is at taozj@live.com
+
+#############################################################
+#using slice
+#切片操作，可以用于列表、元组或者字符串
+shop_list = ['apple','mango','carrot','banana']
+
+print shop_list
+
+print 'Slice 0',shop_list[0]
+print 'Slice -1',shop_list[-1]
+
+print 
+print 'Slice 2:',shop_list[2:]
+print 'Slice 1:-1',shop_list[1:-1]
+print 'Slice :',shop_list[:]
+
+print 
+print 'Slicing for word swaroop'
+name = 'swaroop'
+print 'characters 2:',name[2:]
+print 'characters 1:-1',name[1:-1]
+
+#output result =>
+['apple', 'mango', 'carrot', 'banana']
+Slice 0 apple
+Slice -1 banana
+
+Slice 2: ['carrot', 'banana']
+Slice 1:-1 ['mango', 'carrot']
+Slice : ['apple', 'mango', 'carrot', 'banana']
+
+Slicing for word swaroop
+characters 2: aroop
+characters 1:-1 waroo
+
+#############################################################
+#using cpy
+#对象的赋值基本上都是赋值一个引用，如果需要值的复制，需要使用
+#slice全切片拷贝
+shop_list = ['apple','mango','carrot','banana']
+#if you want to copy things, must use full slice copy
+#or it must just be a reference
+my_list = shop_list
+my_list_2 = shop_list[:]
+
+del shop_list[0]
+print 'Delete shop_list[0], showing shop_list & my_list & my_list_2'
+print 'shop_list:',shop_list
+print 'my_list:',my_list
+print 'my_list_2:',my_list_2
+
+#############################################################
+#using str method 字符串函数使用举例
+name = 'swaroop'
+
+if name.startswith('sw'):
+	print 'The string starts with "sw"'
+
+if 'ar' in name:
+	print 'The string contains "ar"'
+
+if name.find('oo') != -1:
+	print 'The string contains "oo"'
+
+delimiter_sep = '_*_'
+my_list = ['Brazil','Russia','India','China']
+print delimiter_sep.join(my_list)
+
+#output result =>
+The string starts with "sw"
+The string contains "ar"
+The string contains "oo"
+Brazil_*_Russia_*_India_*_China
+
+#############################################################
+#simple class test
+class Person:
+	def say_func(self):
+		print 'Hello world'
+
+p = Person()
+print p
+p.say_func()
+#output result =>
+<__main__.Person instance at 0xb74d92ac>
+Hello world
+#############################################################
+#class test 2
+class Person:
+	#method in the class, the first param MUST be self
+	def __init__(self, name):
+		self.name = name
+	def say_func(self):
+		print 'Hello World, my name is %s.'%(self.name)
+
+p = Person('taozj')
+p.say_func()
+
+#############################################################
+#class test 3
+#显示类成员和对象成员的区别
+class Person:
+	#global class var, not for object
+	i_share = 0
+
+	def __init__(self,name):
+		self.name = name
+		print "Initalizing %s"%(self.name)
+		Person.i_share += 1
+
+	def __del__(self):
+		Person.i_share -= 1
+		if Person.i_share == 0:
+			print 'i_share now is over'
+
+	def say_func(self):
+		print 'Hello World, i_share now is %d.'%(Person.i_share)
+
+p = Person("taozj-0")
+p1 = Person("taozj-1")
+p2 = Person("taozj-2")
+p.say_func()
+
+#output result =>
+Initalizing taozj-0
+Initalizing taozj-1
+Initalizing taozj-2
+Hello World, i_share now is 3.
+i_share now is over
+
+#############################################################
+#class test 4
+#类的继承
+class SchoolMember:
+	def __init__(self,name,age):
+		self.name = name
+		self.age = age
+
+	def tell_me(self):
+		print 'Tell all my details:'
+		print 'Name->%s,Age->%d'%(self.name,self.age)
+		
+class Teacher(SchoolMember):
+	#直接调用父类的方法
+	#Python不会自动调用父类的构造方法，需要自己显式调用
+	def __init__(self,name,age,salary):
+		SchoolMember.__init__(self,name,age)
+		self.salary = salary
+
+	def tell_me(self):
+		SchoolMember.tell_me(self)
+		print 'You are a teacher, salary is %d'%self.salary
+
+class Student(SchoolMember):
+	def __init__(self,name,age,marks):
+		SchoolMember.__init__(self,name,age)
+		self.marks = marks
+	
+	def tell_me(self):
+		SchoolMember.tell_me(self)
+		print 'You are a student, marks is %d'%self.marks
+
+t = Teacher('Taozj',24,800)
+t.tell_me()
+
+s = Student('taozhijiang',24,80)
+s.tell_me()
+
+#output result =>
+Tell all my details:
+Name->Taozj,Age->24
+You are a teacher, salary is 800
+Tell all my details:
+Name->taozhijiang,Age->24
+You are a student, marks is 80
+
+#############################################################
+#Python file test
+import os
+
+poem = ''' Hello, This
+is just a file test
+content, have fun
+with this test!'''
+
+file_name = 'tmp.txt'
+
+f = file(file_name,'w') #mode r w a, default is r
+f.write(poem)
+f.close() 
+
+f = file(file_name,'r')
+while True:
+	line = f.readline()
+	if len(line) == 0:
+		break
+	print line,
+f.close()
+
+print '\nRemoving the tmp file...'
+os.remove(file_name);
+
+#############################################################
+#Python pickle test
+import cPickle as p 
+import os
+
+shop_list = ['apple', 'orangle', 'banana']
+shop_list_file = 'shop_list.dat'
+
+print 'Original shop list'
+print shop_list
+
+f = file(shop_list_file, 'w') #mode r w a, default is r
+p.dump(shop_list, f)
+f.close() 
+
+del shop_list
+
+f = file(shop_list_file,'r')
+store_list = p.load(f)
+f.close()
+print 'Restored shop list'
+print store_list
+
+#############################################################
+#Python exception catch test
+import sys
+
+try:
+	s = raw_input('Enter something->')
+except EOFError:
+	print '\nWhy input EOF?'
+	sys.exit()
+except:
+	print '\nUnknow exception.'
+else:
+	print '\nNo exception found.'
+finally:
+	print '\nFinally called!'
+
+#############################################################
+#Python one program test 
+import sys
+
+def readfile(filename):
+	'''Print a file to the standard output'''
+	f = file(filename)
+	while True:
+		line = f.readline()
+		if len(line) == 0:
+			break
+		print line, #no \n
+	f.close()
+
+if len(sys.argv) < 2:
+	print 'No action specified!'
+	sys.exit()
+
+if sys.argv[1].startswith('--') or \
+   sys.argv[1].startswith('-'):
+	option = sys.argv[1][1:]
+	if option == '-version' or \
+	   option == 'v':
+		print 'Verson 1.3'
+	elif option == '-help' or \
+	     option == 'h':
+		print '''\
+This program prints files to the
+standard output.
+Options include:
+--version -v: Print version number
+--help    -h: Display help information'''
+	else:
+		print 'Unknow option.'
+		sys.exit()
+else:
+	for filename in sys.argv[1:]:
+		readfile(filename)

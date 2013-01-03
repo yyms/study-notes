@@ -1,0 +1,598 @@
+﻿1.C/C++中的大小端问题
+小端模式：MSB最高有效位放置到高地址位置
+大端模式：MSB最高有效位放置到低地址上
+	int a = 0x41434547;   //ACEG
+	char *pt_c = (char *)&a;
+	cout << *pt_c << "," << *(pt_c+1) << "," << *(pt_c+2) << ","<< *(pt_c+3) << endl;
+我们机器打印出来是G,E,C,A，说明是低地址存放的是低数据位，是little-endian模式
+网上说现在流行的PC处理器都是微处理器，小端处理器
+2.C++里面的初始化有直接初始化和复制初始化
+int a (0x40);int b = 0x41;
+第一个是直接初始化，第二个是复制初始化。这个在内置基本类型的差异体现不出来，在后面复杂类型和自定义类型的差异还是很大的。一般来说直接初始化语法简单，效率更高
+3.关于变量的初始化
+内置类型的初始化，取决于变量的位置，位于函数外部的初始化为0，函数内部定义的都不尽兴初始化
+类类型变量的定义都包含了该类需要怎么样初始化，因为每个类类型的创建都需要构造函数 -- 
+同时对于调用一个构造函数创建对象，对象中的成员列表对于类类型的，就调用自己的构造函数初始化，对于内置类型，取决于这个对象定义的位置，如果是函数局部变量，这些内置类型的成员是没有初始化的，如果是全局变量，默认是初始化为0的
+4.const变量
+一般在函数外部定义的变量，默认都是extern的，但是const类型例外，默认的函数外定义的const变量是static的，其他文件不能访问，如果要改变这种特性，只能显式的extern const int aa=5;来定义了
+还有就是extern const int aa 外部链接的话，必须要有个文件定义了这个变量，否则就必须附上初始化值
+5.关于引用
+引用是变量的一个别名，在定义的时候就需要初始化绑定到某个同类型的变量上，此后就不能绑定到别的变量上了，因为对它的所有的赋值语句实际都是隐射到原来绑定的对象了
+对于类的话，引用成员变量的初始化也是在构造函数初始化类表中进行的，如果没有这样的构造函数调用，编译器就会报错：no appropriate default constructor available
+class Fruit {
+public:
+	int a;  int &b;
+	Fruit():b(a){}
+};
+const引用类可以使用const, 非const变量，甚至是122等这些常量标量值来初始化
+非const引用只能使用非const变量来初始化
+6.头文件
+头文件的作用是申明，而不是定义。下面的这些是定义而不是声明，不能放到头文件中去：
+extern int ival = 10;     //有初始化值，是定义
+double finac;
+	//没有extern，是定义
+可以放到头文件中的：类定义，编译时候就知道的const对象（默认是文件内部可见的），inline函数。这些实体可以在多个源文件中定义，包含头文件能保证这些定义的一致
+头文件ifdef这些保护措施能保证这些类定义，const常量定义的不被重复定义
+7.string对象
+新的字符串处理方式，比如string::size_type size() const; bool empty() const;等成员函数用于检测
+注意返回类型的size_type类型，尽量用这些机器无关类型，千万不要返回给一个int变量
+string类在设计上就尽量设计成和其他基本内置类型一样的简单可用，=赋值就是值复制而不是拷贝地址了。string类型重载了> < + += 等这些操作符，但是注意，这些操作符都应该在操作数中至少有一个是string类型的，才能使用这些重载的符号，string = "a" + "b"; 这种肯定是不行的
+8.对于头文件，老的头文件math.h和cmath，前者是C语言版本的，后者是C++版本的。通常应该用后者，因为后者更适合C++，而且都包含在了std命名空间中了
+9.数组：
+数组变量的维数必须是字面值常量、枚举常量或者整形const值
+对于数组的初始化，如果是函数外定义的，默认都是初始化为0；局部定义的没有初始化，但是初始化部分数组元素的，其他没有显式初始化的剩余部分也将初始化为0
+注意：最新的C99标准是支持数组维数的变量定义的
+int a = 10; int arr[a];
+VC 6.0不支持C99，所以没有通过，但是gcc新版本的是支持的
+10.指针
+int * pt = new int [10];
+int * pt_end = pt + 9; 
+cout << sizeof(pt) << endl;                                  //64位的系统，指针的大小是8
+ptrdiff_t size = pt_end - pt;
+cout << pt << "," << pt_end << "," << size << endl; //0x801407040,0x801407064,9 指针减下来的差异值的类型是ptrdiff_t
+int a = 10;
+const int * ptr1 = &a; //*ptr 不能改变
+int * const ptr2 = &a; //ptr不能改变
+11.一个比较晕的问题
+typedef int *pint;
+const pint ptr3 = &a;
+*ptr3 = 34;     //Ok, 实际上面的意思是 int * const ，不能将typedef简单的文本替换
+cout << *iter++ << endl; // 等价于 *(iter++)，而*解析的是iter自增前的副本
+12.动态内存分配new delete
+这个和C语言一样，在堆上分配内存 ，但是他们之间还是有差异的
+(1)malloc free 是库函数，不受编译器的控制；后者是操作符，可以由编译器控制
+(2)前者只能分配固定的内存数目，而后者对于自定义类型来说，可以自动调用构造函数和析构函数
+(3)建立尺寸 为0的数组是不允许的，但是int * pt = new int[0];是允许的，只是不允许解析引用，因为没有指向任何对象（实际操作时候是可以通过的，但是不要这样做！！）
+13.注意，在string类中有个成员函数c_str()
+注意这个函数的原型 const E *c_str() const;
+所以应该是用来返回C类型的字符串兼容一些函数，因为不允许修改字符串
+……bitset
+14.sizeof  操作符有个比较好玩的
+Fruit *p;
+cout << sizeof *p << endl;
+cout << sizeof Fruit << endl;
+即使p没有指向任何对象，但是还是可以将*p用于sizeof的，因为这里不需要对指针进行解析
+15.delete删除内存
+delete可以释放new申请的内存，
+int *pt1 = new int;
+delete pt1;
+但是此时pt1指向的内存地址还是没有变，所以这个指针是个危险的悬垂指针，所以如果delete删除之后pt1还是有效的，最好是pt1=NULL;来安全保证指针不被悬停
+16.类型转换-显式转换
+cast-name<type>(expression); 其中cast-name可以是dynamic_cast, const_cast, static_cast, reinterpret_cast
+a.dynamic_cast:
+继承体系中，安全的向下转型或者跨系转型动作，将指向基类的指针或引用转型为指向子类的对象的指针或引用 
+这个转换挡的必须是多态性的，就是必须要有虚函数的才能通过编译
+class Base {public: virtual void show(){ cout<<"haha"<< endl;} };
+class Child: public Base{};
+Base b;  Base *pb = &b;
+Child c; Child *pc = &c;
+Child *ptr = dynamic_cast<Child *>(pb); //NULL
+ptr = dynamic_cast<Child *>(pc);           //valid
+b.const_cast:用于增加或者删除const属性
+const int num = 124;
+int & num_ref = const_cast<int &>(num);
+cout << "num_ref=" << num_ref << endl;
+	
+		//124
+num_ref = 23;
+cout << "num_ref=" << num_ref << ", and num=" << num << endl;  //23,124
+c.static_cast:Stroustrup让我们可以把它看成隐含转换的显示的逆运算。其实这里应该是以前经常用到的C语言的转换，比如double转换成int类型
+double num1 = 3.14;
+int num2 = static_cast<int>(num1);
+d.reinterpret_cast:很不安全的转换类型，比如指针类型的转换，整数转换成指针这类的，是极度不推荐使用的，可以用它来做一些显摆的甚至变态的事情
+double num1 = 3.14;
+unsigned int num_addr = reinterpret_cast<unsigned int>(&num1);
+double *ptr = reinterpret_cast<double *>(num_addr);
+cout << *ptr << endl; //3.14
+17.switch case 语句
+如果需要在case语句中定义变量，编译时候是通不过去的，因为系统怕你在一个case中定义变量，再别的语句中忽略了定义二使用，发生错误，只允许在default中定义变量
+实现的一个办法是使用语句块，但是变量的作用域就只能是语句块内部
+case 1:
+	printf("a=1\n");
+	{
+		int b = 10;
+		printf("b=%d\n",b);
+	}
+         //printf("b=%d\n",b);  //error, undeclared b
+         break;
+case 10:
+18.C++的异常处理机制
+throw一个exception，表示产生了一个异常，然后就会搜寻调用函数的catch来捕获，如果本函数没有合适的catch捕获，就沿着调用链一直向上搜索，直到找到合适的catch来捕获这个异常
+如果一直都没有被catch，那么系统调用terminate函数，通常是终止程序的执行
+每个异常类都有一个what函数，返回字符串表示出现了什么形式的异常，可以定义自己的异常类
+class newexception: public exception
+{
+public:
+	newexception():exception("A new exception based on exception.") {}
+};
+
+int main(int argc, char* argv[])
+{
+	try{
+	throw newexception();
+		           //execute the first catch
+	throw exception("General exception.");   //execute the … catch
+	}catch(newexception &r){
+		cout << "Catch the exception: " << r.what() << endl;
+	}catch(...){
+		cout << "Unknow exception" << endl;
+	}
+	return 0;
+}
+19.调试与发布：在C/C++中都有一个关键的宏定义NDEBUG，如果没有定义这个宏，就表示程序是调试状态，就可以打印一些verbos，如果要程序发布，就需要定义的时候定义这个宏
+#include <cassert>
+int main(int argc, char* argv[])
+{
+#ifndef NDEBUG
+	cerr << "starting main" << endl;
+#endif
+	int a = 0;
+	assert(a != 0);
+	printf("main execute...");
+	return 0;
+}
+[nicol@workstation ~/test]$ g++ -DNDEBUG 4test.cpp && ./a.out
+main execute...
+[nicol@workstation ~/test]$ g++ 4test.cpp && ./a.out
+	
+		
+starting main
+
+Assertion failed: (a != 0), function main, file 4test.cpp, line 13.
+Abort trap: 6 (core dumped)
+[nicol@workstation ~/test]$ 
+从上面的代码中看出来，其实assert宏也是本身自动受NDEBUG定义控制的
+20.函数重载-const可以用于指针和引用类型的标志
+void fun1(int* a){}
+void fun1(const int* a){}
+void fun1(int & a){}
+void fun1(const int & a){}
+一般的形参是不行的，会出现重定义错误
+通常推荐是如果不需要改变，对于指针和引用就应该用const形参，因为可以接受非const、字面值和产生右值的实参
+注意，不能根据指针本身是否是const来实现重载，比如f(int *); 和 f(int * const);就是重复定义，不能算成重载
+21.函数参数使用数组引用
+对于函数的参数类型是数组名时，数组名会自动转换成指针类型
+同时也可以传递数组引用，注意的是数组的尺寸必须提供，且可以作为重载的条件
+void show(int (& arr)[10])  { cout << "a->" << arr[0] << endl;}
+void show(int (& arr)[5]) { cout << "b->" << arr[0] << endl;}
+
+int a[5] = {1,2};
+int b[10] = {3,4};
+show(a);
+	//b->1
+show(b);
+	//a->3
+这里可以看到，使用数组引用其实还不是很方便，除非对传入数组参数的维数被固定下来
+22.函数参数传递数组
+void show(int arr[][3]){}
+void show(int (*arr)[3]){}
+上面两者是等价的。所有传递给函数作为形参的数组，第一维的维数可以忽略，其他的维数都是参数的一部分
+注意上面第二个参数*的结核性，int (*arr)[3] 表示一个指针，指向3个int数组的指针
+常用的数组的维度控制
+a.最后一个元素使用NULL来补充，使用函数自己检测这个NULL：int arr[] = {1,2,4,NULL};
+b.传递参数的时候指定最后一个元素后面的地址，这个地址是非法的：
+void show(int* begin, int* end)
+{
+	while(begin != end)
+		cout << *begin++ << endl;
+}
+c.传递数组的具体维数：void show(int* arr, size_t num)
+23.C/C++的可变参数，主要有下面两种，后者是纯可变参数的，前者是固定搭配可变参数的。很多情况下使用前者，固定部分控制指示后面可变部分
+void foo(parm_list, ...)
+void foo(...)
+void foo(const char* type, int num, ...){
+	va_list ap;
+
+	va_start(ap, num);
+	string str = type;
+	if( str == "double" ){
+		for(int i = 0; i < num; i++ ){
+			double tmp = va_arg(ap, double);
+			cout << "num " << i << " equals " << tmp << endl;
+		}
+	}
+	va_end(ap);
+}
+调用方法：foo("double",3, 2.3, 4.6, 3.5);
+24.函数的返回值可以是引用或者指针类型，但是引用或指针指向的对象不能是函数中定义的局部变量！
+这种特性可以用来做一些有趣的事情
+int * foo(int * arg){ return arg; }
+int & foo(int & arg){ return arg; }
+const int & foo(const int & arg){ return arg; } //注意const的一致性，如果不想被修改，就返回const类型
+int num = 10;
+foo(num) = 20;
+	cout << num << endl; //20
+*(foo(&num)) = 30;
+	cout << num << endl; //30
+25.函数的默认参数
+int foo(int arg = 10);
+int foo(int arg =10){ return arg; } //  error, should be int foo(int arg){ return arg; } 
+对于默认参数的函数，在一个源文件中只能指定默认形参的默认值一次，否则会提示“redefinition of default parameter”，所以不能同时在函数的定义和函数的声明中指定默认形参的默认值，上面这样的情况是错误的。常见的有两种情况：函数的定义中正常，而在函数的声明中指定参数的默认值，然后包含函数声明的头文件被合适的包含；函数的头文件中的声明正常，在函数定义中指定默认值，这样这个默认值就只能在函数定义的源文件中有效了
+26.内联函数(内联函数是向编译器进行建议，不一定内联能展开成功，在电脑上进行内联测试，但是都没有展开成功 :-( )
+内联函数必须对编译器是可见的，因为在编译预处理的时候需要展开，仅仅提供函数原型声明是不够的
+内联函数可以定义多次，只要在每个源文件中都出现一次就行了。所以最佳的是将内联函数定义放在头文件中
+编译器隐式的对在类声明中给出定义的函数当做内联函数处理
+27.如果要确保函数不会修改调用函数的对象(*this)，可以在函数声明和定义的时候指定函数为常量成员函数const member function
+注意：这类函数可以被任何对象和指针调用，但是对于const对象、以及指向const对象的指针或引用，就只能调用其const成员函数而不能调用其他一般的成员函数
+const Fruit f(3);  f.show(); //error
+28.局部函数声明，重载和可见性
+void show(const string& msg) { cout << "1->" << msg << endl; }
+void show(const char*   msg) { cout << "2->" << msg << endl; }
+对于上面两个重载的函数，如果我们在main函数中声明到
+void show(const char* msg);
+char * msg = "hello!"; string msg2 = "world!";
+show(msg); //good
+show(msg2);//error, no function found
+内部实现的原理是：当调用函数show的时候，编译器会寻找这个函数的声明，在main中找到了show的名字，那么编译器将不再在外部寻找这个名字，而直接用这个符号。接下来将void show(const char* msg);声明同函数调用的实参进行匹配，发现参数不对的，直接报错，正确的类型在外面，但是被隐藏不可见了。如果要想可以执行，必须在main中再另外添加void show(const string & msg);的声明
+29.函数指针
+void foo1(int a)  { cout << "foo1->" << a << endl; }
+void foo2(char b) { cout << "foo2->" << b << endl; }
+void (* foo1_ret(void)) (int a) {return foo1;}                //这里其实是一个函数，返回类型是个函数指针void (*)(int)
+void exec_foo2(char b,void (* fp)(char)) { fp(b);}      //这个是个函数，其中的一个形参是函数指针
+void (* pt_f1)(int a)  =  foo1_ret();
+pt_f1(1);
+exec_foo2('T',foo2);
+// pt_f1 = foo2;   //error，函数指针必须精确匹配，不会类型提升等之类的
+typedef void (*PF2) (char b);   //还是用个typedef比较的好
+PF2 f2 =  foo2; f2('S');
+这里涉及到的是函数的指针，比较的晕，其实也好理解的~
+30.文件输入输出流
+下面给出一个小例子
+#include <fstream>
+int main(int argc, char* argv[])
+{
+//      ifstream infile("in.txt");
+	ifstream infile;
+	infile.open("in.txt");
+//默认是out trunc模式的，可以设置成append添加的状态，fstream 以及派生的ofstream都可以
+	ofstream outfile("out.txt",fstream::out | ofstream::app);
+	string line;
+
+	if(infile.good()  && outfile.good()){
+		while(getline(infile,line)){
+		outfile << line << endl;
+		}
+
+	          if(infile.eof())
+		//good() <-> bad() fail() eof()
+	                 cerr << "End of the source file!" << endl;
+	}  
+
+	infile.close();  infile.clear();
+	outfile.close(); outfile.clear();
+//关闭了一个流之后，调用流的clear()是个好注意。特别是在读取写入多个文件的时候，即使关闭了流，流的状态还是错误状态的话，下次对于别的IO操作还是会出错的
+	return 0;
+}
+
+1.前向声明
+定义两个类或者结构（以下以类为示例），例如A和B，而这两个类需要互相引用，这时候在定义A的时候，B还没有定义，这时候就需要前向申明了。
+不完全类型只能以有限方式使用，不能定义该类型的对象，不完全类型只能用于定义指向该类型的指针及引用,或者用于声明(而不是定义)使用该类型作为形参类型或返回类型的函数。比如以下这个例子：
+class B;
+class A {
+public:
+	B& b_ref;
+	A(B *pb):b_ref(*pb){}
+};
+
+class B {
+public:
+	A* a;
+	void show(void) { cout << "Haha!" << endl; }
+};
+
+int main(int argc, char* argv[]){
+
+	A* pa = new A(new B());
+	pa->b_ref.show();
+}
+class B 需要在class A中使用，而class A 又需要在class B中使用~
+类本身也可以使用自己，比如引用或者指针这些类型，一旦class class-name出现，class-name就可以以非完全方式使用了
+class LinkA {
+public:
+	LinkA * pre;
+	LinkA * next;
+};
+2.常量成员函数
+成员函数本身的const属性是可以被重载的
+LinkA & foo(int a) const {}
+LinkA & foo(int a) {}
+这样，成员函数具有const重载时，类的const对象将调用类的const版本成员函数，类的非const对象将调用非const版本成员函数；如果只有const成员函数，类的非const对象也可以调用const成员函数；如果只有非const成员函数，类的const对象不能调用非const成员函数！！
+3.可变数据成员
+mutable声明成的数据成员，是永远不可能是const的，即使是const对象的成员也是，同时在const成员函数中也是可以被随意改变的
+class LinkA {
+public:
+	mutable int a;
+	LinkA(int a):a(a){}
+	void change() const { a++; cout << "a now is " << a << endl;}
+};
+然后可以这样运行
+const LinkA la(5);
+la.change();
+	
+		// a is 6
+4.构造函数和初始化列表
+构造函数的分为两个阶段执行：初始化列表；普通计算阶段。前者是在初始化列表中执行的，后者是在构造函数函数体中执行的。初始化列表只在函数定义中指明，不能在函数声明中指明。
+只能通过初始化列表来初始化的：没有默认构造函数的类类型成员，const成员，引用类型的成员。这些都不能通过函数体赋值的，只能在初始化列表中进行初始化。初始化的顺序是在类中定义的顺序，而不是初始化列表的顺序。
+class A {
+public:
+	A(int a){}
+};
+
+class B {
+public:
+	A a;
+	B():a(2){}
+	void show(void) { cout << "Haha!" << endl; }
+};
+5.默认构造函数的调用问题
+Fruit f(); //这里可能是想要调用默认的构造函数，但是实际是函数声明。代码没有语法错误，但是要用f来调用成员的话就会报错了。下面才是正确的方法
+Fruit f = Fruit();
+Fruit f;
+对于构造函数，如果是单参数，会有隐含的类型转换，比如
+LinkA(int a){} 就可以使用LinkA a = 3;
+explicit LinkA(string b){} 就不能使用LinkA b = "as";  //error，只能使用LinkA a = LinkA("aa");
+对于单形参，建议总是使用explicit来进行保护
+6.friend友元
+class Food;
+class Fruit {
+private:
+	int a;
+public:
+	int b;
+	Fruit(Food *pfd):a(1),b(2){}
+	friend void show(Fruit *pf);
+	friend class Food;
+};
+
+void show(Fruit *pft) { cout << "in ::show() a->" << pft->a << "b->" << pft->b << endl; }
+
+class Food {
+public:
+	void show(Fruit *pft) { cout << "in Food::show() a->" << pft->a << "b->" << pft->b << endl; }
+};
+类的友元函数或者友元类，可以访问类的所有成员（包括私有成员）
+7.static类成员
+static类成员没有this指针，独立于该类的任何对象而存在，可以使用static成员，不能使非static类成员
+static成员函数没有this指针，自然也不能被声明为const类型，因为没有this指针不会修改该类的所属对象；同时static函数也不能被声明为虚函数
+static成员变量，一般在类声明中使用static进行声明，然后再CXX源代码文件中定义并初始化。只有整形const static类型可以在类声明中同时进行初始化。
+class Test
+{
+public:
+	static int a;
+	const static int b = 24;
+};
+int Test::a = 12;
+const int Test::b ;  //貌似没有声明也是可以的。。。
+8.复制构造函数
+对象初始化，包括直接初始化和复制初始化。直接初始化是调用参数匹配的构造函数直接产生对象，复制初始化是使用参数匹配的构造函数产生一个临时对象，然后使用复制构造函数将临时对象复制到正在创建的对象中。对于类类型，只有指定单个实参或显式创建一个临时对象用于复制时候，才调用复制初始化
+当在函数中时，如果形参不是引用类型的，将进行参数复制，返回不是引用类型时，也将对return值进行复制
+xxxx
+9.操作符重载
+操作符比较的多，这里罗列了一个大例子，基本容阔了所有的类型
+通常不建议重载 , & && || 等操作符
+#include <iostream>
+using namespace std;
+
+class Test {
+private:
+	int m_a; int m_b;
+public:
+	Test(int a, int b):m_a(a),m_b(b){}
+	//C++操作符重载的一个要点就是返回的类型要与原始操作符类型要一致 +=,以及后面的++ --都要返回对象本身类型
+	Test & operator+= (const Test & t);
+	//这里的重载，对于自增自减是自动的。因为是但操作数，C++没办法区别，就在后缀形式中添加了(int)来区别，实际调用的时候不用指定这个参数的
+	Test & operator++ (); 
+	Test operator++ (int); 
+	bool operator== (const Test & t);
+	friend istream & operator>> (istream & in, Test & t);
+	friend ostream & operator<< (ostream & in, const Test & t);
+};
+	
+Test & Test::operator++ (){  //前缀形式
+	++m_a; ++m_b;
+		
+
+	return *this;
+}
+
+Test Test::operator++ (int){ //后缀形式，需要返回先前没有改变的副本
+	Test ret(*this);
+		
+			//这里调用复制构造函数，保存返回状态
+	m_a++; m_b++;
+
+	return ret;
+}
+
+Test & Test::operator+= (const Test & t){
+	m_a += t.m_a;
+	m_b += t.m_b;
+}
+	
+bool Test::operator== (const Test & t){
+	return (m_a==t.m_a && m_b==t.m_b)?true:false;
+}
+
+istream & operator>> (istream & in, Test & t){
+	int a; int b;
+	
+	cout << "Please insert your value for m_a and m_b:" << endl;
+	in >> a >> b;
+	if(in){  //检测输入流的状态，如果出错了就构造一个新的对象
+		t.m_a = a; t.m_b = b;
+	}else
+		t = Test(0,0);
+	return in;
+		
+}
+	
+ostream & operator<< (ostream & in, const Test & t){
+	cout << "a =" << t.m_a << ", b ="<< t.m_b <;   //应当做最小的格式化，且一般不建议输入换行符
+}
+
+int main(int argc, char* argv[])
+{
+	Test tt(2,3);
+	Test tt2(0,0);
+	cin >> tt2;
+	if( tt == tt2) 
+		cout << "your input equals tt." << endl;
+	else
+		cout << "your input differs tt." << endl;
+          //cout << tt2.operator++() << endl;   函数调用模式
+	cout << "++tt2" << endl; cout << ++tt2 << endl;
+	//cout << tt2.operator++(0) << endl;
+	cout << "tt2++" << endl; cout << tt2++ << endl;
+	cout << "after tt2++" << endl; cout << tt2 << endl;
+	tt += tt2;
+	cout << tt;
+		
+}
+
+xxx转换与类类型
+
+10.C++面向对象编程：数据抽象、继承、动态绑定
+11.派生类的protected访问权限，解释起来就是派生类对象可以访问protected的成员，而不能通过基类的对象来访问基类的protected的成员，这点关系有点微妙哈~
+class B {
+protected:
+	int m_a;
+public:
+	B(int a):m_a(a){}
+};
+
+class D: public B {
+public:
+	void show() {  cout << m_a << endl;}
+	void show(const B & b, const D &d );
+	D(int a):B(a){}
+};
+
+void D::show(const B & b, const D &d ){
+	// cout << b.m_a << endl; //we can not do like this
+	cout <<  d.m_a << endl;    //it is ok!
+}
+12.C++的多态
+C++的多态来源于引用和指针的静态类型（在编译时候知道的指针或引用的类型）和动态类型（仅仅在运行时候才知道的指针或引用所绑定的类型）。
+一般来说，派生类 需要重新定义基类的virtual虚函数（尽管不是必须的，但是基类希望派生类重新定义的函数都用virtual虚函数标示出来了，基类定义了虚函数之后，派生类继承的函数也是virtual的，即使在派生类中不用明显标示出来）。派生类中虚函数的声明必须同基类完全匹配，一个例外是在基类中返回的基类的指针或者引用，在派生类的虚函数中可以协变成返回派生类的指针或者引用，也可以不变，返回基类的指针或者引用。
+当派生类需要重新定义基类的函数时，需要在类声明中重新声明该函数，然后提供派生类的定义。很多情况下，派生类可以对基类的函数进行补充，那么可以用基类的类限制符来调用基类的版本
+对于多态的具体实现必须满足这个条件：通过基类的指针或者引用来调用函数，调用的函数被声明为虚函数。如果函数的调用没有virtual，那么就在编译的时候采用静态连编，通过指针或者引用的类型确定调用函数的版本。因为在指针或者引用中，基类的指针或者引用可以关联基类的对象，同时也可以安全的关联派生类的对象，所以这个情况下基类的引用或者指针就只能调用基类的函数版本了！
+class B {
+protected:
+	int m_a;
+public:
+	virtual void show() { cout << "this is the output from base B." << endl; }
+	void show_i() { cout << "Base class, m_a equals " << m_a << endl;}
+	B(int a):m_a(a){}
+};
+
+class D: public B {
+public:
+	virtual void show(); //need declare here
+	void show_i() {cout << "Drived class of show_i()" << endl;}
+	D(int a):B(a){}
+};
+
+void D::show(){  
+	cout << "In the drived  class~" ;
+	B::show();
+		
+			//calls the based type
+	cout << "this is the output from Drived D."  << endl;
+}
+
+int main(int argc, char* argv[])
+{
+	D *pd = new D(12); B *pb = new B(11);
+	B *pb_d = pd;
+
+	pb_d->show_i();
+		
+			//base edition
+	pb_d->show();
+		
+			//drived edition
+
+	delete pd; delete pb;
+}
+13.继承的访问级别
+每个基类本身控制着对自身成员的访问控制，同时在继承过程中，继承的类型还可以对这个访问级别进行更加严格的控制，但是派生类的限制只能对继承成员的访问更加的严格，而不能放松
+public继承:基类成员保持了自己的访问级别，基类的public成员仍为派生类的public成员，基类的protected成员仍然是派生类的proteced成员
+protected继承：基类的public和protected成员在派生类中是protected成员
+private继承：基类的所有成员在派生类中为private成员
+这里说明一下，一般的public被称为是借口继承，因为基类的接口在派生类中仍然是接口的形式；而protected和private继承通常被称为是实现继承，派生类在实现过程中使用在基类中继承的部分，但是这些没有称为派生类接口的一部分
+14.在protected或者private继承中，“派生类可以恢复继承成员的访问级别，但不能使访问级别比基类中原来指定的更严格或更宽松”
+这个在测试中发现是不满足的
+class B {
+private:
+	void show_private() { cout << "private member in class B."  << endl;}
+protected:
+	void show_protected() { cout << "protected member in class B."  << endl;}
+public:
+	void show_public() { cout << "public member in class B."  << endl;}
+};
+
+class D_protected: protected B {
+public:
+	using B::show_protected;
+	//using B::show_private;
+};
+class D_private: private B {
+public:
+	using B::show_protected;
+	using B::show_public;
+	//using B::show_private;
+};
+
+int main(int argc, char* argv[])
+{
+	D_protected d_protected;
+	//d_protected.show_public();
+	d_protected.show_protected();
+	//d_protected.show_private();
+	
+	D_private d_private;
+	d_private.show_protected();
+	d_private.show_public();
+	//d_private.show_private();
+}
+上面的注释的代码是没办法通过编译的，而其他的代码都是正常的。似乎正如网上人说的：“
+可被派生类访问的基类成员，都可以在派生类中的任何访问标号下用using声明，对于派生类外部来说，被声明成员的访问权限由using声明所在的访问标号决定，与基类中的访问权限无关，也与派生列表中的访问标号无关。”
+15.抽象类与纯虚函数
+如果在虚函数的后面添加=0，那么这个函数就是纯虚函数，含有一个或者多个纯虚函数的类称为抽象类。除了作为抽象类的派生类的组成一部分，不能建立抽象类的对象。因为不能建立抽象类的对象，这种继承关系也就没有多态的概念了~~
+在派生类中，必须全部实现基类的纯虚函数，才能创建对象，否则自己还是抽象类，仍然不能创建对象
+虽然不能用抽象类创建对象，但是可以使用抽象类来创建指针，可以用这个指针来指向派生类的对象
+16.纯虚函数将产生抽象类——不能实例化的类，有些时候想使一个类成为抽象类，但刚好又没有任何纯虚函数，这时候可以声明一个纯虚的析构函数，来使得类称为抽象类。但是虽然是纯虚函数的析构函数，但是这个析构函数最终还是要调用的，所以必须提供这个析构函数的定义同时。
+class B {
+public:
+	virtual ~B() = 0 {
+		
+	
+		cout << "B deconstructor called." << endl; 
+	}
+};
+
+class C : public B {
+public:
+   //下面的C是可以实例化的，而且下面的纯虚函数的实现是可选的
+   //virtual ~C() { cout << "C deconstructor called." << endl;  };
+};

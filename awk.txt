@@ -1,0 +1,316 @@
+awk 学习笔记
+上一天学习sed，打算接下来一天学习awk的．但是实际上发现awk比sed要复杂的多的多了...
+
+awk -opts 'cmd' filenames
+
+1.简介
+awk将输入的每行作为一条记录，默认的行分隔符就是换行符．$0指代整条记录NR将每条记录的行号保存在其中，每处理一条记录，NR的值都会增加1
+[bash][nicol@dream llee]$ awk '{print NR,$0}' employees                              
+1 Tom Jones       4424    5/12/66 543354
+2 Mary Adams      5346    11/4/63 28765
+3 Sally Chang     1654    7/22/54 650000
+4 Billy Black     1683    9/23/44 336500 [/bash]
+
+每条记录都是通过字段的词组组成的，而这些字段的分隔符默认是空白字符(空格或者制表符)，每条字段都是$1,$2...开始.同时每行的字段数目都保存在NF这个特殊的字段当中
+[bash][nicol@dream llee]$ awk '{print NR,$1,$2,$4,NF}' employees                 
+1 Tom Jones 5/12/66 5
+2 Mary Adams 11/4/63 5
+3 Sally Chang 7/22/54 5
+4 Billy Black 9/23/44 5
+[nicol@dream llee]$ [/bash]
+
+默认分割符是空格和制表符，如果想要改变这个默认设置，可以使用-F这个参数
+[bash][nicol@dream llee]$ awk -F: '{print NR, $1,$7}' /etc/passwd                      
+1 root /bin/bash
+2 bin /sbin/nologin
+3 daemon /sbin/nologin[/bash]
+
+2.模式
+默认的模式匹配是包含if的意思的，就是当模式满足的时候，才进行默认的操作，而默认的操作，就是打印这些满足要求的记录文本
+[bash][nicol@dream llee]$ awk '/Tom/' employees 
+Tom Jones       4424    5/12/66 543354
+[nicol@dream llee]$ awk '$3<3000' employees                               
+Sally Chang     1654    7/22/54 650000
+Billy Black     1683    9/23/44 336500 
+[nicol@dream llee]$ awk '$0 ~ /Tom/{print}' employees                     
+Tom Jones       4424    5/12/66 543354
+[nicol@dream llee]$ [/bash]
+第三个操作等价于第一个操作
+
+3.操作　{action1; action2; ... ;}
+[bash][nicol@dream llee]$ awk '$0 ~ /Tom/{print "NAME->" $1,$2}' employees      
+NAME->Tom Jones
+[nicol@dream llee]$ [/bash]
+
+4.awk正则表达式元字符
+^		行首定位符
+$		行尾定位符
+.		匹配除换行之外的单个字符
+*		匹配0个或者多个前导字符(这里是前导字符0或者多个，任意一个或多个字符，使用 .* )
++		匹配一个或者多个前导字符
+?		匹配0个或者1个前导字符
+[]	        指定字符中的任意一个字符，比如[Ll] [a-z]
+[^]		上面一样，不匹配的字符
+AA|BB		匹配AA或者BB
+(AB)+		匹配一个或者多个AB组合，比如AB,ABAB,ABABAB...
+\*		匹配*本身
+&		保存查找匹配到的串，可以用在后面的替换中 s/love/**&**/
+
+*****同前面sed相比，awk不支持的模式
+\(..\)   \<		\>	x\{m\}  x\{m,\}　x\{m,n\}　
+
+5.匹配
+a)整行匹配
+[bash][nicol@dream llee]$ awk '/[TM]/' employees 
+Tom Jones       4424    5/12/66 543354
+Mary Adams      5346    11/4/63 28765
+[nicol@dream llee]$ awk '/To|Mar/' employees                       
+Tom Jones       4424    5/12/66 543354
+Mary Adams      5346    11/4/63 28765
+[nicol@dream llee]$ [/bash]
+b) ~ 字段匹配操作符 !符号可以取反
+[bash][nicol@dream llee]$ awk '$2 ~ /Ch/ {print NR,$1,$2}' employees     
+3 Sally Chang
+[nicol@dream llee]$ awk '$2 !~ /Ch/ {print NR,$1,$2}' employees    
+1 Tom Jones
+2 Mary Adams
+4 Billy Black
+[nicol@dream llee]$ awk ' $4 ~ /^Gr/' datafile                                    
+western         WE      Sharon Gray             5.3     .97     5       23
+[nicol@dream llee]$ [/bash]
+c) misc
+[bash][nicol@dream llee]$ awk ' $5 ~ /\.[4-6]+/' datafile                               
+eastern         EA      TB Savage               4.4     .84     5       20
+north           NO      Margot Weber            4.5     .89     5        9
+[nicol@dream llee]$ [/bash]
+
+6.关系运算符和条件表达式
+a)< <= > >= != == ~ !~ 前面是一般的比较运算，后面是匹配是否
+[bash][nicol@dream llee]$ awk '$5 >= 5.3 ' datafile                                     
+western         WE      Sharon Gray             5.3     .97     5       23
+northeast       NE      AM Main Jr.             5.1     .94     3       13
+central         CT      Ann Stephens            5.7     .94     5       13
+[nicol@dream llee]$ [/bash]
+上面我们看到一个问题数据，第二条记录．其实看看前面的姓名有三个字段...
+b)算书运算 + - * / % ^
+最后一个是取冪运算.
+awk支持浮点运算，而且会按照浮点方式执行运算
+[bash][nicol@dream llee]$ awk '/centr/ {print NR,$1,$2,$5+3,7+8}' datafile             
+9 central CT 8.7 15
+[nicol@dream llee]$ echo 9 | awk '{print $1%2, $1/2}'
+1 4.5
+[nicol@dream llee]$  [/bash]
+c)逻辑运算 && || !
+[bash][nicol@dream llee]$ awk '$5 > 5.5 && $1 ~ /cen/' datafile                        
+central         CT      Ann Stephens            5.7     .94     5       
+[/bash]
+d)条件表达式
+条件表达式1 ?　表达式2 : 表达式3
+[bash][nicol@dream llee]$ awk 'NR<3 { print ( NF==8 ? "valid" : "invalid" ),"NF=",NF}' 
+datafile                                                                         
+valid NF= 8
+valid NF= 8
+[nicol@dream llee]$ [/bash]
+e)范围模式 ,
+awk的范围模式也是封闭的．而且他们会多次匹配，第一次匹配完，还可以进行下面接下来的第二次,第三次可能的匹配范围.如果开头匹配到了，但是没有结尾的话，会把整个文件记录的末尾当作是这次匹配的结尾
+[bash][nicol@dream llee]$ awk '/north/,/south/ {print NR, $1, $2}' datafile            
+1 northwest NW
+2 western WE
+3 southwest SW
+7 northeast NE
+8 north NO
+9 central CT
+[nicol@dream llee]$ [/bash]
+下面的第二次匹配没有结尾，就默认到文件的结尾
+f)赋值运算 = += -= *= /= %=
+[bash][nicol@dream llee]$ awk '/north/ {$1="NORTH" ; print NR,$1,$2,$3}' datafile      
+1 NORTH NW Charles
+7 NORTH NE AM
+8 NORTH NO Margot
+[nicol@dream llee]$ [/bash]
+
+7.awk内置变量
+ARGC	 	命令行参数个数
+ARGV		命令行参数构成胡数组
+FILENAME 	当前输入文件的文件名
+FNR　	 	当前文件的记录数
+FS　		输入分割符，默认是空格字符
+NF		当前记录的字段数
+NR		当前的记录编号
+OFS		输出字段分割符
+ORS		记录分割符
+IGNORECASE	是否忽略大小写
+[bash][nicol@dream llee]$ echo -ne "123\n346\n" | awk '{ print $0,ARGC,ARGV[0],FILENAME,FNR,FS,NF,NR,OFS }'                                                     
+123 1 awk - 1   1 1  
+346 1 awk - 2   1 2  
+[nicol@dream llee]$ awk ' {IGNORECASE=1}; $1=="North" {print NR,$1,$2,$3} ' datafile                                                                      
+8 north NO Margot
+[nicol@dream llee]$ [/bash]
+这里的FS OFS看似都是空格
+
+8.变量
+变量类型:　数值类型　字符串类型
+变量默认值: 0 ""
+强制转化: name+0 name+""
+[bash][nicol@dream llee]$ echo 123 | awk '{ x = $1; y = ++x; print "x="x,"y="y}'    
+x=124 y=124
+[nicol@dream llee]$ echo 123 | awk '{ x = $1; y = x++; print "x="x,"y="y}'    
+x=124 y=123
+[nicol@dream llee]$ [/bash]
+
+9.BEGIN,END模式
+BEGIN是在对输入文件进行任何处理之前进行的操作块．实际上不需要任何输入文件，也能执行BEGIN测试.这里通常设置OFS,RS,FS等值，以及用户定义输入格式等.所以后面有很多同输入无关的测试，这样就可以把这些代码写道BEGIN的语句块里面.
+END模式也不匹配任何输入，awk是在处理完毕所有输入行之后才处理END模式
+[bash][nicol@dream llee]$ awk ' BEGIN{IGNORECASE=1; count=0}; $1 ~ /North/ {count++} ; END{ print "Found",count}  ' datafile                                    
+Found 3
+[nicol@dream llee]$ [/bash]
+
+10.重定向和管道
+a)支持 > >>　重定向，但是文件名需要使用""括起来，getline可以用于输入重定向
+[bash][nicol@dream llee]$ awk 'BEGIN { "date" | getline date; print "The date is",date > date.file"}'                                                                 
+[nicol@dream llee]$ cat date.file 
+The date is Sun Jul  8 19:59:54 CST 2012
+[nicol@dream llee]$ awk 'BEGIN { while ("ls" | getline ) print}'
+2test.sh
+datafile
+[nicol@dream llee]$ [/bash]
+b)管道 |
+[bash][nicol@dream llee]$ awk '/north/ { print $0 | "grep Charles" }' datafile         
+northwest       NW      Charles Main            3.0     .98     3       34
+[nicol@dream llee]$ [/bash]
+c) system　函数. 进行系统命令调用
+[bash][nicol@dream llee]$ awk 'BEGIN { system("whoami") }'                            
+nicol[/bash]
+d) printf　格式化
+[bash][nicol@dream llee]$ awk 'BEGIN { printf "Hello, %s, you are %d years old.\n","Nicol TAO","23"}'                                                                
+Hello, Nicol TAO, you are 23 years old.
+[nicol@dream llee]$ [/bash]
+
+11.条件语句和循环
+a) if
+在条件模式中，if是隐含了的．而条件语句if是需要直接声明出来的
+句式是if () {} else if () {} else {}
+[bash][nicol@dream llee]$ awk '{ if( $1 ~ /north/) { print "north related."} else if ( $1 ~ /south/ ) { print "south related."} else { print "wield..."} }' datafile  
+north related.
+wield...
+south related.[/bash]
+b) while
+句法 while () {}
+[bash][nicol@dream llee]$ awk 'BEGIN { i = 0; count = 0; } { while ( i < NR ) { i ++; if ( $1 ~ /north/ ) { count++; print NR,$1 $2 } } } END { print "Count:",count }' datafile 
+1 northwestNW
+7 northeastNE
+8 northNO
+Count: 3
+[nicol@dream llee]$ [/bash]
+c) for 普通for循环
+[bash][nicol@dream llee]$ awk 'BEGIN { i = 0;} { for(;i<NR;i++) { if( $1 ~ /north/ ){ print NR,$1,$2,"~~" } }}' datafile 
+1 northwest NW ~~
+7 northeast NE ~~
+8 north NO ~~
+[nicol@dream llee]$ 
+[/bash]
+d) break continue
+同C语言一样的，跳出循环体和跳出本次循环
+
+12.程序控制语句
+a) next
+从文件中读取下一行输入，然后从awk脚本胡顶部开始重新执行.(同continue也
+有点相似)
+b) exit
+中断记录的处理，但是不能够跳过END语句块．exit可以带一个退出参数0~255. 0表示成功.这个退出参数实际就传递给了$?表示执行的状态
+[bash][nicol@dream llee]$ awk '{  if ( $1 ~ /north/ ) { print NR,$1,$2,"skip"; next; } if ( $2 ~ /SO/ ) { print NR,$1,$2,"exit will"; exit 3; } print NR,$1,$2,"after if..."; } END { print "Fininal should be called here..." }' datafile 
+1 northwest NW skip
+2 western WE after if...
+3 southwest SW after if...
+4 southern SO exit will
+Fininal should be called here...
+[nicol@dream llee]$ echo $?
+3
+[nicol@dream llee]$ [/bash]
+
+13.数组
+a)awk中的数组，也可以称为键值对，因为数组的下标可以是字符串.
+[bash][nicol@dream llee]$ awk 'BEGIN{x=0;i=0;} {name[x++]=$2;} END { for(;i<NR;i++){ print "name["i"] is",name[i]} }' employees                                         
+name[0] is Jones
+name[1] is Adams
+name[2] is Chang
+name[3] is Black
+[nicol@dream llee]$ [/bash]
+b)上面提出了for循环结构．而如果数组的下标不是数字的时候，使用for就很不方便了，这边还有特殊的for循环结构
+for( item in array) { ...array[item]...}
+这里面，item会自动依次提取array中的索引值的，数组元素就通过array[item]来访问．注意的是awk中的数组是通过hash来存贮的，所以理论上说取的顺序是不定的．
+[bash][nicol@dream llee]$ awk '{name[$1]=$2;} END { for(item in name ) { print "Family name for",item,"is",name[item];} }' employees 
+Family name for Tom is Jones
+Family name for Mary is Adams
+Family name for Sally is Chang
+Family name for Billy is Black
+[nicol@dream llee]$ awk '{ if ($1 ~ /north/){ count["north"] ++;} else if ( $1 ~ /east/) count["east"]++; else count["other"]++;} END{ for(item in count) { print item,"related count:",count[item]; } }' datafile  
+east related count: 2
+north related count: 3
+other related count: 4
+[nicol@dream llee]$ [/bash]
+c)数组 misc
+splite可以分割字符串，形成数组
+[bash][nicol@dream llee]$ awk 'BEGIN{ str="/etc/samba/smb.conf"; split(str,name,"/"); for (item in name) print name[item]":";}'                       
+smb.conf:
+:
+etc:
+samba:
+[nicol@dream llee]$ [/bash]
+这里的开头/分割出来，产生了一个空串哈．．．
+
+14.内置函数
+sub			(/reg/,替换串[,目标串])
+gsub			(/reg/,替换串[,目标串])
+这两者的区别是，sub只进行第一次替换，而gsub会对所有串进行替换(相当于s添加了g参数吧)
+index(str,sub_str)　	返回sub_str第一次在str中出现的位置(偏移量从1开始)
+length(str) 		返回字符串的字符个数
+substr(str,start_pos[,length])　返回子串，如果没有length，就到串的末尾
+match(str,/reg/) 	返回正则匹配在字符串中的位置，同时设置RSTART和
+RLENGTH的值
+split(str,arr_name[,split_sig])
+[bash][nicol@dream llee]$ awk '{sub(/[Ee]ast/,"EAST",$1); print $1,index($1,"EAST"),"length",length($1);}' datafile                                                  
+northwest 0 length 9
+western 0 length 7
+southwest 0 length 9
+southern 0 length 8
+southEAST 6 length 9
+EASTern 1 length 7
+northEAST 6 length 9
+north 0 length 5
+central 0 length 7
+[nicol@dream llee]$ awk '{ sub(/lly/,"--&**",$1); print $1 }' employees 
+Tom
+Mary
+Sa--lly**
+Bi--lly**
+[nicol@dream llee]$ awk '{if ( match($1,/[Ee]ast/) != 0) { print RSTART,RLENGTH,$1; }}' datafile                                                               
+6 4 southeast
+1 4 eastern
+6 4 northeast
+[nicol@dream llee]$  [/bash]
+上面可以看见&的用法哈
+
+15.算数函数
+atan2(x,y) cos(x) exp(x) int(x)直接设去设小数，保留整数部分 log(x) rand() 产生随机数(0~1)
+sin(x) sqrt(x) srand(x) 有x种子的随机数
+每次调用rand()都会产生相同的随机数，这时候需要调用srand()重新产生一个种子，后面的随机数才不同
+[bash][nicol@dream llee]$ awk 'BEGIN{ print rand(),rand(),srand(),rand(),rand();}'                                                                   
+0.237788 0.291066 1 0.395713 0.31578
+[nicol@dream llee]$ awk 'BEGIN{ print rand(),rand(),srand(),rand(),rand();}'                                                                   
+0.237788 0.291066 1 0.68453 0.818368
+[nicol@dream llee]$ [/bash]
+
+其实我觉得用awk单独做脚本的不是很多，很多都是和sed一块，夹杂到shell
+script里面用的．比如：
+[bash]
+PRIMSAM=`cat /etc/hosts | /usr/xpg4/bin/grep "OAM_PRIMARY_IF_A" | awk '{print $2}'`
+SEDSAM=`cat /etc/hosts | /usr/xpg4/bin/grep "OAM_SECONDARY_IF_A" | awk '{print $2}'`
+count1=`ttsys -v 1 -e "select count(*) from CONFIGPARAMS where NODENAME='CPSNodes' and SUBSYSTEMNAME='Call Processing' and MANAGERNAME='Call Manager' and PARAMNAME='LocNumMapFeature';quit"|sed -e 's/< //g' -e 's/ >//g'|awk '{print $1}'`
+[/bash]
+[bash]SMBPRINC=`klist -k | grep "\<root@" | uniq | awk '{print $2;}'`
+TMPDIR="/"`date +%N | md5sum | awk '{print $1}'`
+TMPFILE=`date +%N | md5sum | awk '{print $1}'`
+sed -e "s/^MOUNTD_NFS_V2=.*$//g" /etc/sysconfig/nfs -i 2>&1 >/dev/null
+sed -e {s/REALM/$( echo `hostname -d` | tr [:lower:] [:upper:] )/} $TESTCONFIGFILE -i
+[/bash]
