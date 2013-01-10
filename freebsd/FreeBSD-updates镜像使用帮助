@@ -1,0 +1,33 @@
+FreeBSD-updates镜像使用帮助
+
+收录架构
+
+i386
+amd64
+收录版本
+
+详见页面列表: http://freebsd-updates.mirrors.163.com
+
+更新时间
+
+每8小时更新一次
+
+使用说明
+
+方法1: 在终端下执行以下命令(操作前请做好相应备份)
+
+    freebsd-update -s 'freebsd-updates.mirrors.163.com' fetch
+    freebsd-update -s 'freebsd-updates.mirrors.163.com' install
+方法2: 编辑/etc/freebsd-update.conf文件, 修改ServerName字段(操作前请做好相应备份)
+
+    ServerName freebsd-updates.mirrors.163.com
+然后执行以下命令进行更新
+
+    freebsd-update fetch
+    freebsd-update install
+相关链接
+
+官方主页: http://www.freebsd.org/
+邮件列表: http://www.freebsd.org/community/mailinglists.html
+论坛: http://forums.freebsd.org/
+手册: http://www.freebsd.org/doc/zh_CN/books/handbook/

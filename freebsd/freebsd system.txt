@@ -1,0 +1,99 @@
+
+1、编辑/boot/loader.conf优化启动
+autoboot_delay="2" 
+## 设置启动等待时间为2秒。
+shutdown -p now  bsd才会关闭电源
+
+2、如果决定使用inetd则启动inetd的日志选项，并提高一个服务每分钟启动的上限数目（默认是256，建议提高到1024），防止DoS攻击； 
+/etc/rc.conf
+inetd_enable="YES" 
+inetd_flags="-l -R 1024" 
+
+3、#设置内核安全级别（Securelevels） 
+FreeBSD有个比较强的功能，就是能够定义系统内核的安全等级，主要是为了防止内核后门专门定制的，能通过不同的等级限制对内核的访问和对防火墙等的修改。内核安全级别从-1到3，-1和0级别是非安全级别。
+kern_securelevel_enable="YES" 
+kern_securelevel="2"  
+第一句是打开安全等级，第二句是定义等级。它一共五个等级，下面说说不同之处。
+* kern_securelevel -1：这是系统默认级别，没有提供任何内核的保护错误；
+* kern_securelevel  0：基本上作用不多，当你的系统刚启动就是0级别的，当进入多用户模式的时候就自动变成1级了。
+* kern_securelevel  1：在这个级别上，有如下几个限制：
+a. 不能通过kldload或者kldunload加载或者卸载可加载内核模块；
+b. 应用程序不能通过/dev/mem或者/dev/kmem直接写内存；
+c. 不能直接往已经装在(mounted)的磁盘写东西，也就是不能格式化磁盘，但是可以通过标准的内核接口执行写操作；
+d. 不能启动X-windows，同时不能使用chflags来修改文件属性；
+* kern_securelevel  2：在 1 级别的基础上还不能写没装载的磁盘，而且不能在1秒之内制造多次警告，这个是防止DoS控制台的；
+* kern_securelevel  3：在 2 级别的级别上不允许修改IPFW防火墙的规则。
+如果你已经装了防火墙，并且把规则设好了，不轻易改动，那么建议使用3级别，如果你没有装防火墙，而且还准备装防火墙的话，不建议使用。我们这里推荐使用 2 级别，能够避免比较多对内核攻击。
+
+4、#在系统启动时清空/tmp 
+clear_tmp_enable="YES"
+
+5、使用 tcp wrapper （/etc/hosts.allow）允许/拒绝访问特定的TCP服务。 
+tcp_wrappers 可以在访问者要求服务前先检查/etc/hosts.allow 文件中设定的规则，符合放行规则的才会去启动服务程序，可以达到有条件开放系统服务的目的。 
+在/etc/host.allow文件中，注释掉"ALL:ALL:allow",去掉其他无关服务访问，增加如下内容： 
+sshd: localhost : allow 
+sshd: 192.168.1. : allow 
+sshd: 192.168.187. : allow 
+sshd: all : deny 
+另外需要注意的是规则的先后顺序，因为tcp_wrappers的规则有first match 的特性，最好把放行的规则写在前面，然后在后面加一条全部禁止的规则； 
+为避免 DNS 欺骗，规则尽量使用IP表示； 
+FreeBSD缺省的/etc/hosts.allow中第一条规则是 ALL : ALL : allow，自己的规则一定要放在他前面才有效。 
+
+6、/etc/motd是用户登陆之后的公布信息
+修改 /etc/motd防止系统信息泄露
+/etc/rc.conf --> update_motd="NO" 防止系统更新 motd 信息
+编辑 /etc/motd 来阻止计算机说出一些不该说的东西，或者宣扬你的一些想法，
+随后，删除版权信息： 
+touch /etc/COPYRIGHT 
+即使你已经修改了motd并从中删除了内核版本信息，默认情况下FreeBSD仍然会在启动之后把这些东西加入 /etc/motd 。因此需要修改 /etc/rc.conf 并加入下面的设置： 
+update_motd="NO" 
+
+
+7、sshd 安全配置
+修改 /etc/ssh/ssh_config 文件
+使用 protocol 2 将
+protocol 2,1 -> protocol 1
+修改sshd最大连接数目
+MaxStartups 5:50:10
+可以限制组或光是单个用户访问shell 
+AllowGroups wheel 
+AllowUsers xundi 
+不允许某些用户登陆，相关命令： 
+#chsh -s /sbin/nologin user 
+
+8、ports常用的一些命令
+1.怎样找到我想安装的包路径：
+# cd /usr/ports
+# make search name=mysql
+2.仅仅下载源码包，而不安装：
+# cd /usr/ports/directory
+# make fetch
+3.预先知道需要那些包，才能安装这个软件：
+# cd /usr/ports/directory
+# make fetch-list
+4.把软件装到指定的目录：
+# cd /usr/ports/directory
+# make PREFIX=/usr install
+5.仅仅下载包，解包，而不安装：
+# cd /usr/ports/directory
+# make extract
+6.用PORTS制作一个定制二进制包：
+# cd /usr/ports/somewhere/frobble
+# make extract
+# cd work/frobble-2.8
+[Apply your patches]
+# cd ../..
+# make package
+
+9、 /etc/login.access
+这些是限制用户登陆的
+在vmware中测试发现，对于设置
+-:ALL EXCEPT root mysql:local
+可以禁止所有除root mysql 的用户从终端登陆，只能使用sshd登陆了
+(没有mysql用户的话，数据库就无法启动了)
+
+
+
+
+
+

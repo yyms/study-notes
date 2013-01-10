@@ -1,0 +1,46 @@
+pkg_add -r mysql55-server mysql55-client
+
+cd /usr/local/bin
+
+./mysql_install_db --user=mysql --basedir=../ --datadir=/var/db/mysql
+
+
+/etc/rc.conf 添加 mysql_enable="YES"
+
+PLEASE REMEMBER TO SET A PASSWORD FOR THE MySQL root USER !
+To do so, start the server, then issue the following commands:
+
+..//bin/mysqladmin -u root password 'new-password'
+..//bin/mysqladmin -u root -h freebsd.localhost password 'new-password'
+
+----------
+
+pkg_add -r apache22
+
+配置文件在
+/usr/local/etc/apache/httpd.conf
+
+echo mysql_enable="YES" >> /etc/rc.conf
+
+kldload accf_http 
+
+/boot/defaults/loader.conf 
+accf_data_load="YES" 
+accf_http_load="YES" 
+
+apachectl restart
+
+----------------
+
+/usr/ports/lang/php5
+make config
+make istall clean
+
+php5-extensions php5-mysql 可以用pkg_add 安装
+
+-------------------
+
+phpmyadmin 
+使用 ports安装 
+make config
+

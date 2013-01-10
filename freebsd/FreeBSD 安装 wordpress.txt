@@ -1,0 +1,92 @@
+FreeBSD 安装 wordpress过程
+
+1.安装数据库支持
+
+pkg_add -r mysql55-server mysql55-client
+cd /usr/local/bin
+安装数据库文件
+./mysql_install_db --user=mysql --basedir=../ --datadir=/var/db/mysql
+开机启动数据库服务器
+/etc/rc.conf 添加 mysql_enable="YES"
+设置数据库管理员密码
+..//bin/mysqladmin -u root password 'new-password'
+
+----------
+
+2.安装apache服务器
+pkg_add -r apache22
+配置文件在
+/usr/local/etc/apache/httpd.conf
+开机启动apache服务器
+echo mysql_enable="YES" >> /etc/rc.conf
+加载accf模块，呵呵
+kldload accf_http 
+/boot/defaults/loader.conf 
+accf_data_load="YES" 
+accf_http_load="YES" 
+
+apachectl restart
+
+apache的配置文件在/usr/local/etc/apache22/httpd.conf
+这里主要需要修改的是
+添加模块
+LoadModule php5_module        libexec/apache22/libphp5.so
+文件解析顺序，php文件先前
+（我就犯了这个瓜错误，结果wordpress打开都是目录结构，因为wordpress每个目录下都有个index.php的，默认apache没有支持就只能列出目录内容了）
+<IfModule dir_module>
+    DirectoryIndex index.php index.html
+</IfModule>
+还有就是在<IfModule mime_module>中，添加php文件的真正支持
+        AddType application/x-httpd-php .php
+        AddType application/x-httpd-php-source .phps
+
+
+----------------
+
+3.安装php支持，这里用ports安装比较的好，先前个人用pkg_add安装出现问题了
+cd /usr/ports/lang/php52
+make config
+make install clean
+安装完成之后，把/usr/local/etc/php.ini-recommended 拷贝成/usr/local/etc/php.ini
+将文件的 register_globals 从 register_globals=Off 改成On
+
+然后安装扩展模块
+cd /usr/ports/lang/php52-extensions 
+make config			//至少选上mysql支持哈
+make install clean
+cd /usr/ports/database/php5-mysql
+make config
+make install clean
+注意：如果后面安装wordpress时候出现您的php没有mysql支持类似的错误，可以检查下
+ /usr/local/etc/php/extensions.ini
+ 是否是有extension=mysql.so，觉得有这个可能。。。。
+-------------------
+
+这里可以测试你的FAMP安装是否正常，在默认的apache文件跟目录/usr/local/www/apache22/data中，写入你的test.php文件，内容嘛，嘿嘿
+<?php
+	phpinfo();
+?>
+看你有没有出现我的页面啊！
+出现的话，应该就么得多大问题了
+
+===============================
+
+下面是安装wordpress，wordpress需求可以看官方文件，需要php和mysql支持就可以了
+1.下载最新的wordpress-3.2.1-zh_CN.zip，然后在/usr/local/www/apache22/data中解压，注意解压后以此为根目录，不要有wordpress目录哈
+2.数据库支持
+mysql -u root -p
+登录到数据库后，创建数据库，比如
+CREATE DATABASE 'wordpress';
+创建wordpress用户
+GRANT ALL PRIVILEGES ON 'wordpress'.* TO "abc"@"%" IDENTIFIED BY "123456";
+刷新
+FLUSH PRIVILEGES;
+3.重命名wp-config-sample.php文件为wp-config.php，修改数据库连接信息
+// ** MySQL settings ** //
+define('DB_NAME', 'wordpress');     // The name of the database
+define('DB_USER', 'abc');     // Your MySQL username
+define('DB_PASSWORD', '123456'); // ...and password
+define('DB_HOST', 'localhost');     // 99% chance you won't need to change this value
+4.浏览器运行 http://localhost/wp-admin/install.php
+然后，你懂的，呵呵~
+【如果是ZFS文件系统，赶紧像我一样做个快照吧哈】

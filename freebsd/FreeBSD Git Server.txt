@@ -1,0 +1,140 @@
+我在FreeBSD 9.0 安装了Git和GitWeb代码服务器，主要是参照的这个手册
+How to setup a Git repository 
+http://forums.freebsd.org/showthread.php?t=10810
+
+这里假设你的Apache服务器已经搭建成功了。我是在虚拟机下面进行实验的，为了显示的更加“专业”，我给虚拟机分配了一个域名workstation.org，而代码的服务器使用了Apache的虚拟主机，分配域名为repos.workstation.org.
+这里需要测试你的域名解析的了不：
+[bash][nicol@workstation ~]$ nslookup repos.workstation.org
+Server:         127.0.0.1
+Address:        127.0.0.1#53
+
+Name:   repos.workstation.org
+Address: 192.168.154.4
+
+[nicol@workstation ~]$ [/bash]
+named的设置我会在另外的文章中总结出来。
+
+1.安装Git
+[bash]# cd /usr/ports/devel/git
+# make install clean[/bash]
+在安装的时候，把下面的选项选中 GITWEB SVN P4 CVS，后面或许是为了兼容，但是一定要保证你的GITWEB模块选中 
+安装完git之后，如果需要开机启动，就在/etc/rc.conf中添加如下内容
+[bash]git_daemon_enable="YES"
+git_daemon_directory="/vob/src"
+git_daemon_flags="--syslog --base-path=/vob/src/ --export-all --detach"
+[/bash]
+2.基本系统的设置
+安装完Git之后，添加git用户和git组。我们把代码放在服务器的/vob/src目录下，然后下面建立repos目录托管代码。
+[bash]# pw groupadd -n git -g 9418
+# pw useradd -n git -u 9418 -g git -c git -d /vob/src -s /usr/local/libexec/git-core/git-shell -h -
+# passwd git
+# chown git:git /vob/src/
+# chmod 755 /vob/src
+# mkdir /vob/src/repos
+# chown git:git /vob/src/repos
+# chmod 775 /vob/src/repos[/bash]
+
+添加nicol用户到git用户组，这样可以保证nicol可以访问代码目录，也可以commit提交代码
+[bash]# vi /etc/group
+...
+git:*:9418:nicol[/bash]
+
+3.此处git基本已经安装完成了，下面使用一个proj1.git项目进行测试
+[bash][nicol@workstation /vob/src/repos]$ mkdir proj1.git
+[nicol@workstation /vob/src/repos]$ cd proj1.git/ && git init --bare --shared
+Initialized empty shared Git repository in /vob/src/repos/proj1.git/
+[nicol@workstation /vob/src/repos/proj1.git]$ [/bash]
+
+设置开发者角色，包括提交的名字和电子邮件
+[bash][nicol@workstation /vob/src/repos/proj1.git]$ git config --global user.name "Nicol TAO"
+[nicol@workstation /vob/src/repos/proj1.git]$ git config --global user.email taozhijiang@gmail.com[/bash]
+
+4.操作test工程，写代码测试
+[bash][nicol@workstation /vob/src/repos/proj1.git]$ cd
+[nicol@workstation ~]$ mkdir workshop
+[nicol@workstation ~]$ cd workshop/ && mkdir proj1/
+[nicol@workstation ~/workshop]$ ls
+proj1
+[nicol@workstation ~/workshop]$ cd proj1/ && git init
+Initialized empty Git repository in /home/nicol/workshop/proj1/.git/[/bash]
+
+创建测试文件
+[bash][nicol@workstation ~/workshop/proj1]$ ls
+Makefile        myls.c
+[nicol@workstation ~/workshop/proj1]$ git status
+# On branch master
+#
+# Initial commit
+#
+# Untracked files:
+#   (use "git add <file>..." to include in what will be committed)
+#
+#       Makefile
+#       myls.c
+nothing added to commit but untracked files present (use "git add" to track)
+[nicol@workstation ~/workshop/proj1]$ git add *
+[nicol@workstation ~/workshop/proj1]$ git commit -m "initial commit for proj1"
+[master (root-commit) feec298] initial commit for proj1
+ 2 files changed, 28 insertions(+)
+ create mode 100755 Makefile
+ create mode 100755 myls.c[/bash]
+ 
+5.把服务器提交到远程的代码创库中去 
+[bash][nicol@workstation ~/workshop/proj1]$ git remote add origin git@192.168.152.4:repos/proj1.git
+[nicol@workstation ~/workshop/proj1]$ git push origin master
+Password:
+Counting objects: 4, done.
+Delta compression using up to 2 threads.
+Compressing objects: 100% (4/4), done.
+Writing objects: 100% (4/4), 601 bytes, done.
+Total 4 (delta 0), reused 0 (delta 0)
+To git@192.168.152.4:repos/proj1.git
+ * [new branch]      master -> master
+[nicol@workstation ~/workshop/proj1]$[/bash] 
+注意：
+这里我使用了repos.workstation.org的IP地址来直接提交的。在测试中我发现，这里使用域名来提交会失败，不允许被连接，而且此时域名虽然可以被解析，但是不能被到达，他会经过虚拟机的默认网关192.168.152.2向外发，而我们的git server和git client是在本地的，而直接使用IP地址就没有这个问题了。我初步的诊断结果是这样的，有机会测试一下~~
+ 
+6.此时的代码已经被添加到了远程的仓库的，然后我们来配置apache服务器，可以从Browser中查看代码的信息
+Apache使用的是虚拟主机，把/usr/local/etc/apache22/httpd.conf 中的Include etc/apache22/extra/httpd-vhosts.conf注释打开，表示使用虚拟主机特性；然后编辑/usr/local/etc/apache22/extra/httpd-vhosts.conf，添加repos.workstation.org主机信息
+[bash]
+<VirtualHost *:80>
+  ServerAdmin nicol@workstation.org
+  DocumentRoot "/home/www/repos"
+  ServerName repos.workstation.org
+  ErrorLog "/var/tmp/repos-errolog"
+  CustomLog "/var/tmp/repos-accesslog" combined
+
+  <Directory "/home/www/repos">
+    Options ExecCGI
+    Order allow,deny
+    Allow from all
+    
+    DirectoryIndex gitweb.cgi
+    AddHandler cgi-script .cgi
+  </Directory>
+</VirtualHost>[/bash]
+ 
+然后
+[bash][nicol@freebsd /home/www/repos]$ sudo cp /usr/local/share/examples/git/gitweb/git* /home/www/repos/[/bash]
+修改如下的信息
+[bash]our $projectroot = "/vob/src/repos";
+our $home_link_str = "-repos-nicol-";
+our $site_name = "repos.workstation.org"
+our $home_text = "content.html";
+our $projects_list_description_width = 40;[/bash]
+
+然后apachectl restart重启apache服务器，打开浏览器观看效果吧
+
+7.如果需要更加完善一些，可以添加项目的描述，拥有者等信息
+添加项目描述
+修改/vob/src/repos/proj1.git/description
+
+Web页面添加项目信息
+修改/vob/src/repos/proj1.git/config
+[bash][gitweb]
+        owner = Nicol TAO
+        url = git://repos.workstation.org/repos/proj1.git[/bash]
+然后信息就更加的完善了哈！ 
+ 
+ 
+ 

@@ -1,0 +1,36 @@
+pkg_add -r vsftpd
+
+然后编辑 /usr/local/etc/vsftpd.conf
+//*****************************
+anonymous_enable=NO  //禁止匿名登陆
+local_enable=YES  //允许本地用户登陆
+local_umask=022 FTP  //上本地的文件权限755，默认是077
+connect_form_port_20=yes   //启用FTP数据端口的数据连接
+xferlog_enable=yes  //激活上传和下传的日志
+xferlog_std_format=yes   //使用标准的日志格式
+idle_session_timeout=120  //用户会话空闲后2分钟
+data_connection_timeout=300  //将数据连接空闲5分钟断
+ascii_upload_enable=YES   //启用ASCII方式上传
+ascii_download_enable=YES   //帮带起用ASCII方式下载
+ftpd_banner=Welcome to blah FTP service.   //FTP服务器登陆欢迎信息
+chroot_list_enable=YES //开启锁定用户目录
+chroot_list_file=/任意路径/vsftpd.chroot_list   //要锁定目录的用户保存文件，格式为每个用户一行
+
+注意，测试的结果显示，这里的配置文件几乎没有用了，而
+freebsd将这些都分配到了别的文件了
+不允许登陆帐户 /etc/ftpusers --》 匿名用户也可以加进去
+chroot帐户	/etc/ftpchroot 
+/etc/ftpwelcome /etc/ftpmotd  欢迎标语，修改之后可以防止泄露系统信息。
+(这些配置都是更改后立即生效的)
+匿名用户 anonymous
+对于匿名用户，其对应的根目录是 /var/ftp/
+//*****************************
+
+
+ 下面通过超级服务 inetd 来启动 ftpd 服务
+将/etc/inetd.conf 中的 ftp 的项目打开
+#ftp stream tcp nowait root /usr/local/libexec/vsftpd vsftpd
+
+然后，在系统服务 /etc/rc.conf 中，添加 inetd_enable="YES"来确保在系统启动的时候
+启动inetd服务，从而带动 ftpd 的启动
+

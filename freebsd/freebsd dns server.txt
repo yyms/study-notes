@@ -1,0 +1,127 @@
+虽然FreeBSD是跑在了一个虚拟机下，但是我希望他能成为一个功能完善的服务器。我的服务的名字是workstation.org，IP段是192.168.152.4/24，前面搭建git服务器的时候就已经是用了repos.workstation.org的域名了，下面将DNS服务器的搭建来总结一下吧！
+
+FreeBSD系统已经默认安装了Bind软件，作为最流行的DNS实现，我们需要简单的配置就可以生效了。
+
+1.修改/etc/resolv.conf，指定本机器为dns server
+[bash]search workstation.org
+nameserver 127.0.0.1[/bash]
+
+2.修改/etc/namedb/named.conf，主要有下面几个的改变：
+添加 workstation.org 和 192.168.152的域描述，指出描述文件的位置
+[bash]zone "workstation.org" {
+        type master;
+        file "/etc/namedb/master/workstation.org.db";
+};
+        
+zone "152.168.192.in-addr.arpa" {
+        type master;
+        file "/etc/namedb/master/workstation.org.db.res";
+};[/bash]
+
+这个填写上级的dns服务器
+[bash]forwarders {
+	202.115.32.36;
+};[/bash]
+
+3.下面是域描述文件的具体内容。这里的格式比较的严格，不要写错。特别是主机名后面，结尾有一个点，表示是全称主机名而不是相对主机名。比如dns.workstation.org.就是全称主机名，而dns就是相对主机名。
+[bash][nicol@workstation ~]$ cat /etc/namedb/master/workstation.org.db
+$TTL 3600
+workstation.org.        IN      SOA dns.workstation.org. admin.workstation.org. (
+                2012022916 ;Serial 
+                28800 ; Refresh
+                7200 ; Retry
+                604800 ; Expire
+                86400 ; Minimum
+)
+                IN      NS      dns.workstation.org.
+localhost       IN      A       127.0.0.1
+@               IN      A       192.168.152.4
+dns             IN      A       192.168.152.4
+repos           IN      A       192.168.154.4
+www             IN      A       192.168.152.4
+[nicol@workstation ~]$ cat /etc/namedb/master/workstation.org.db.res 
+$TTL 3600
+@ IN SOA dns.workstation.org. admin.workstation.org. (
+          2012022916 ;Serial
+          28800 ; Refresh
+          7200 ; Retry
+          604800 ; Expire
+          86400 ; Minimum
+)
+    IN      NS dns.workstation.org.
+
+4 IN PTR workstation.org.
+4 IN PTR dns.workstation.org.
+4 IN PTR www.workstation.org.
+4 IN PTR repos.workstation.org.[/bash]
+
+4.重新启动namdb服务使其生效
+[bash]/etc/rc.d/named forcerestart[/bash]
+如果需要开机启动，请在/etc/rc.conf中添加 named_enable="YES" 就可以了
+
+5.域名正向和反向解析的测试
+[bash][nicol@workstation ~]$ host -a workstation.org
+Trying "workstation.org"
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 44858
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 3, AUTHORITY: 0, ADDITIONAL: 1
+
+;; QUESTION SECTION:
+;workstation.org.               IN      ANY
+
+;; ANSWER SECTION:
+workstation.org.        3600    IN      A       192.168.152.4
+workstation.org.        3600    IN      SOA     dns.workstation.org. admin.workstation.org. 2012022916 28800 7200 604800 86400
+workstation.org.        3600    IN      NS      dns.workstation.org.
+
+;; ADDITIONAL SECTION:
+dns.workstation.org.    3600    IN      A       192.168.152.4
+
+Received 125 bytes from 127.0.0.1#53 in 0 ms
+[nicol@workstation ~]$ host -a 192.168.152.4
+Trying "4.152.168.192.in-addr.arpa"
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 45215
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 4, AUTHORITY: 1, ADDITIONAL: 1
+
+;; QUESTION SECTION:
+;4.152.168.192.in-addr.arpa.    IN      PTR
+
+;; ANSWER SECTION:
+4.152.168.192.in-addr.arpa. 3600 IN     PTR     repos.workstation.org.
+4.152.168.192.in-addr.arpa. 3600 IN     PTR     workstation.org.
+4.152.168.192.in-addr.arpa. 3600 IN     PTR     dns.workstation.org.
+4.152.168.192.in-addr.arpa. 3600 IN     PTR     www.workstation.org.
+
+;; AUTHORITY SECTION:
+152.168.192.in-addr.arpa. 3600  IN      NS      dns.workstation.org.
+
+;; ADDITIONAL SECTION:
+dns.workstation.org.    3600    IN      A       192.168.152.4
+
+Received 159 bytes from 127.0.0.1#53 in 0 ms
+[nicol@workstation ~]$ nslookup repos.workstation.org
+Server:         127.0.0.1
+Address:        127.0.0.1#53
+
+Name:   repos.workstation.org
+Address: 192.168.154.4
+
+[nicol@workstation ~]$ nslookup 192.168.152.4
+Server:         127.0.0.1
+Address:        127.0.0.1#53
+
+4.152.168.192.in-addr.arpa      name = www.workstation.org.
+4.152.168.192.in-addr.arpa      name = repos.workstation.org.
+4.152.168.192.in-addr.arpa      name = workstation.org.
+4.152.168.192.in-addr.arpa      name = dns.workstation.org.
+
+[nicol@workstation ~]$ nslookup www.anyshare.org
+Server:         127.0.0.1
+Address:        127.0.0.1#53
+
+Non-authoritative answer:
+Name:   www.anyshare.org
+Address: 210.56.48.127
+
+[nicol@workstation ~]$ [/bash]
+
+哈哈，大功告成！

@@ -1,0 +1,86 @@
+用光盘启动后，选择<Live>模式，提示login: 的时候，直接输入root回车就可以了
+
+Fixit# gpart create -s gpt da0
+Fixit# gpart create -s gpt da1
+
+
+gpart add -s 64K -t freebsd-boot da0 
+gpart add -s 3G -t freebsd-swap -l swap0 da0 
+gpart add -s 17G -t freebsd-zfs -l zdisk0 da0 
+gpart add -t freebsd-zfs -l tank0 da0 
+gpart bootcode -b /boot/pmbr -p /boot/gptzfsboot -i 1 da0
+
+gpart add -s 64K -t freebsd-boot da1 
+gpart add -s 3G -t freebsd-swap -l swap1 da1
+gpart add -s 17G -t freebsd-zfs -l zdisk1 da1
+gpart add -t freebsd-zfs -l tank1 da1
+gpart bootcode -b /boot/pmbr -p /boot/gptzfsboot -i 1 da1
+
+gnop create -S 4096 /dev/gpt/zdisk0 
+gnop create -S 4096 /dev/gpt/zdisk1 
+gnop create -S 4096 /dev/gpt/tank0 
+gnop create -S 4096 /dev/gpt/tank1 
+
+zpool create zdisk mirror /dev/gpt/zdisk0.nop /dev/gpt/zdisk1.nop
+zpool create tank mirror /dev/gpt/tank0.nop /dev/gpt/tank1.nop
+
+zpool set bootfs=zdisk zdisk
+zfs set checksum=fletcher4 zdisk 
+zfs set mountpoint=/mnt zdisk 
+
+zfs create tank/home 
+zfs set mountpoint=/home tank/home
+
+zpool export zdisk 
+zpool export tank 
+zpool import -o cachefile=/tmp/zpool.cache tank
+zpool import -o cachefile=/tmp/zpool.cache zdisk
+
+
+
+
+sh 
+cd /usr/freebsd-dist 
+export DESTDIR=/mnt 
+for file in base.txz lib32.txz kernel.txz doc.txz src.txz; 
+do (cat $file | tar --unlink -xpJf - -C ${DESTDIR:-/}); done 
+
+
+
+cp /tmp/zpool.cache /mnt/boot/zfs/zpool.cache 
+
+cat <<EOF> /mnt/boot/loader.conf 
+zfs_load="YES" 
+geom_mirror_load="YES"
+vfs.root.mountfrom="zfs:zdisk 
+vfs.root.mountfrom.options="rw" 
+vfs.zfs.prefetch_disable=0 
+EOF 
+
+cat <<EOF> /mnt/etc/rc.conf 
+zfs_enable="YES" 
+hostname="fb9workstation" 
+defaultrouter="192.168.204.1" 
+ifconfig_em0="inet 192.168.204.5 netmask 255.255.255.0" 
+EOF
+
+cat <<EOF> /mnt/etc/fstab 
+# Device                       Mountpoint              FStype  Options         Dump    Pass# 
+/dev/gpt/swap0                 none                    swap    sw              0       0 
+EOF
+
+
+kldload /boot/kernel/geom_mirror.ko
+gmirror label -b prefer swap gpt/swap0 gpt/swap1
+cat << EOF > /zroot/etc/fstab
+ # Device                       Mountpoint              FStype  Options         Dump    Pass#
+ /dev/mirror/swap                       none                    swap    sw              0       0
+ EOF
+ 
+ 
+zfs unmount -a 
+
+zfs set mountpoint=legacy zdisk 
+zfs set mountpoint=/home tank/home 
+
+

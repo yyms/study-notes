@@ -1,0 +1,97 @@
+CentOS 和 FreeBSD 操作系统内核的安装编译
+
+昨天把FreeBSD的内核又重新编译了一遍，以前写过这个文档的，现在重新整理一下发上来。另外Linux操作系统的内核的编译还是被问到很多次的，下面也进行总结实验一下吧~
+
+一、先写一下 CentOS下的编译升级内核，那个很简单的。
+CentOS 6默认是使用的2.6.32的内核，这里我们升级成2.6.33的内核来测试一下
+[bash][admin@gy-linux ~]$ uname -a
+Linux gy-linux 2.6.32-220.7.1.el6.x86_64 #1 SMP Wed Mar 7 00:52:02 GMT 2012 x86_64 x86_64 x86_64 GNU/Linux
+[admin@gy-linux ~]$ wget -c http://www.kernel.org/pub/linux/kernel/v2.6/linux-2.6.33.tar.bz2
+[admin@gy-linux ~]$ cd /usr/src/
+[admin@gy-linux src]$ ls
+debug  kernels  linux-2.6.33
+[admin@gy-linux src]$ cd linux-2.6.33/
+[admin@gy-linux linux-2.6.33]$ sudo make clean && make mrproper
+[admin@gy-linux linux-2.6.33]$ sudo cp /boot/config-2.6.32-220.7.1.el6.x86_64 ./.config
+[admin@gy-linux linux-2.6.33]$ sudo make menuconfig[/bash]
+
+...
+使用系统的默认内核配置文件，然后再在这个基础上改，成功率要高一些。这里慢慢折腾吧~
+...
+
+配置完之后，一下就是编译模块和内核了
+[bash][admin@gy-linux linux-2.6.33]$ sudo make
+[admin@gy-linux linux-2.6.33]$ sudo make modules
+[admin@gy-linux linux-2.6.33]$ sudo make modules_install
+[admin@gy-linux linux-2.6.33]$ sudo make install
+[admin@gy-linux linux-2.6.33]$ sudo reboot[/bash]
+make install命了，这个命令会在/boot目录安装相应的文件，而且会自动修改系统的/etc/grub.conf文件的系统引导项，添加新安装的内核，你需要检查default默认引导项是不是你新安装的内核
+[bash][admin@gy-linux ~]$ uname -a
+Linux gy-linux 2.6.33 #4 SMP Wed Apr 11 11:41:27 CST 2012 x86_64 x86_64 x86_64 GNU/Linux
+[admin@gy-linux ~]$[/bash] 
+
+
+二、FreeBSD操作系统内核编译
+而在FreeBSD下面，对每个构架都有一个配置文件，比如amd64代表64位的x86_64处理器构架，单独有个默认的配置文件，叫做GENERIC，位于/usr/src/sys/amd64/conf下面，我们配置内核就是编辑这个配置文件的，把不需要的东西使用#注释起来就可以了。觉得呢，对于初级的配置来说，这个还是很简单的，不需要的东西就直接注释掉，而且各个模块的依赖性很小；高级的配置的话还需要自己定制一些参数啊什么的，可玩性还是很强的~
+
+1.首先，编译内核是有风险的，因为即使编译安装都没问题，也不一定保证你编译出来的内核有用，能引导系统，所以备份是最好的。虽然在FreeBSD的机制中，旧的内核会被自动保存在/boot/kernel.old/，但是多次编译安装后，它可能被污染，所以我自己创建了一个自己的目录来保存内核
+[bash][nicol@workstation /boot]$ sudo mkdir /boot/generic-kernel/
+[nicol@workstation /boot]$ sudo cp -fr /boot/kernel /boot/generic-kernel/
+[nicol@workstation /boot]$ ls /boot/generic-kernel/
+kernel
+[nicol@workstation /boot]$ du -h /boot/generic-kernel/  
+324M    /boot/generic-kernel/kernel
+324M    /boot/generic-kernel/
+[/bash]
+这样，即使你的情况再糟糕，你的系统还是有一个可以启动的干净的原生的Generic内核存在的哈
+
+2.配置内核
+[bash][nicol@workstation ~]$ cd /usr/src/sys/amd64/conf/
+[nicol@workstation /usr/src/sys/amd64/conf]$ cp GENERIC NICOL_KERNEL[/bash]
+然后就编辑NICOL_KERNEL文件吧，其实目前对FreeBSD还不是很了解，觉得现在能做的就是把下面不需要用到的设备驱动模块给注释掉，这样可以减少内核的体积，以及系统启动时候枚举的时间，不过个人倒是没有感觉到快很多哈，但是理论说，内核变小的话，驻留在系统的内存也会变少的。
+但是有很多高级特性或者options，没有在默认内核中配置的话，还是要自己配置编入内核的
+配置详细可以参照http://www.freebsd.org/doc/en_US.ISO8859-1/books/handbook/kernelconfig-config.html
+我个人的配置呢，因为我的FreeBSD是装在虚拟机里面的，所以对于硬件的话，我把所有无线网卡部分都取消了，USB网卡也取消掉了，网卡也只保存了em，就是Intel PRO/1000 Gigabit Ethernet Family，什么打印机啊，软驱啊之类的也可以注释掉。具体你的硬件信息可以使用dmesg查看的哈~
+
+3.编译内核
+配置完成之后，就编译和安装内核了
+[bash][nicol@workstation /usr/src/sys/amd64/conf]$ cd /usr/src/
+[nicol@workstation /usr/src]$ sudo make buildkernel KERNCONF=NICOL_KERNEL[/bash]
+没有问题的话，最后会显示出这样类似的信息，就表示编译成功了
+[bash]awk -f /usr/src/sys/conf/kmod_syms.awk zlib.ko.debug  export_syms | xargs -J% objcopy % zlib.ko.debug
+objcopy --only-keep-debug zlib.ko.debug zlib.ko.symbols
+objcopy --strip-debug --add-gnu-debuglink=zlib.ko.symbols zlib.ko.debug zlib.ko
+--------------------------------------------------------------
+>>> Kernel build for NICOL_KERNEL completed on Wed Apr 11 09:49:38 CST 2012
+--------------------------------------------------------------
+[nicol@workstation /usr/src]$ [/bash]
+还有就是FreeBSD编译内核，编译产生的临时文件等会放置到/usr/obj目录下面，而不会放到/usr/src下面，所以/usr/src目录下都是“干净”的源代码文件。
+[bash][nicol@workstation /usr/obj/usr/src/sys]$ du -hs NICOL_KERNEL/
+300M    NICOL_KERNEL/
+[nicol@workstation /usr/obj/usr/src/sys]$ ls NICOL_KERNEL/
+Makefile                   cpufreq_if.o               ignore_pci.o               nfs_clvnops.o              opt_vesa.h                 subr_uio.o
+OsdDebug.o                 crc32.o                    imgact_elf.o               nfs_commonacl.o            opt_vfs_aio.h              subr_unit.o
+OsdEnvironment.o           dead_vnops.o               imgact_elf32.o             nfs_commonkrpc.o           opt_vga.h                  support.o
+OsdHardware.o              default_pager.o            imgact_shell.o             nfs_commonport.o           opt_vlan.h                 svc.o
+......[/bash]
+
+4.安装内核
+[bash][nicol@workstation /usr/src]$ sudo make installkernel KERNCONF=NICOL_KERNEL[/bash]
+重启了，然后看看你是否足够幸运不了啊！:-)
+[bash][nicol@workstation ~]$ uname -a
+FreeBSD workstation.org 9.0-RELEASE FreeBSD 9.0-RELEASE #0: Wed Apr 11 09:38:38 CST 2012     root@workstation.org:/usr/obj/usr/src/sys/NICOL_KERNEL  amd64[/bash]
+
+5.如果你的内核不能运行，在启动的菜单选择时候，选择 “Escape to a loader prompt” 选项，其编号为2
+此时的提示符是OK
+[bash]OK unload kernel
+OK boot /boot/generic-kernel/kernel[/bash]
+就可以用原先的保存的旧的内核引导系统了
+
+
+6.这个是原先的系统GENERIC内核的大小
+[bash][nicol@workstation ~]$ du -hs /boot/kernel
+ 97M    /boot/kernel    
+[nicol@workstation ~]$ du -hs /boot/generic-kernel/kernel/
+324M    /boot/generic-kernel/kernel/[/bash]
+空间小的多了，因为注释掉了很多没有的外设，所以很多模块就没有编译了
+

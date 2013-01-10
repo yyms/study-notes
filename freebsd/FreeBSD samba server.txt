@@ -1,0 +1,29 @@
+/usr/ports/net/samba35
+make install clean
+
+在FreeBSD 中，有swat工具，可以使用web来对samba进行配置，这个服务可以通过inetd超级服务来启动
+修改/etc/inetd.conf 打开服务
+/etc/rc.d/inetd reload 重新加载就可以了
+然后通过 host:901 就可以浏览器来访问了
+
+复制/usr/local/share/examples/samba34/smb.conf.default到
+ /usr/local/etc/smb.conf 作为默认的配置文件
+
+/etc/rc.conf中开启samba自动启动
+samba_enable="YES"
+
+/usr/local/etc/rc.d/samba start 可以启动samba服务
+
+打开计算机的 
+Server 
+Workstation 
+Computer Browser
+服务，就可以搜索到FreeBSD服务器了
+
+现在添加samba用户，基于系统已有用户
+ smbpasswd -a taozj
+提示输入密码:
+
+测试不对，只有使用winuser用户，它就可以了。
+然后windows 就可以登陆了
+

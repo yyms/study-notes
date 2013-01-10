@@ -1,0 +1,5 @@
+INSERT INTO user(host,user,password) VALUES( 'localhost' , 'taozj', PASSWORD('060179'));
+
+FLUSH PRIVILEGES 
+
+GRANT USAGE ON *.* TO taozj@"%";

@@ -1,0 +1,47 @@
+pkg_add -r postgresql90-server
+
+
+To initialize the database, run
+
+  /usr/local/etc/rc.d/postgresql initdb
+
+You can then start PostgreSQL by running:
+
+  /usr/local/etc/rc.d/postgresql start
+
+开机数据库自动启动，添加到/etc/rc.conf
+postgresql_enable="YES"
+
+数据库初始化
+/usr/local/bin/initdb -D /usr/local/pgsql/data
+
+启动数据库
+/usr/local/bin/postgres -D /usr/local/pgsql/data
+
+列出数据库中的所有数据库
+ /usr/local/bin/psql -l
+
+登陆到其中的postgres数据库
+/usr/local/bin/psql postgres
+
+创建数据库用户
+ /usr/local/bin/createuser -sdrP pgsqldb
+选项:超级用户、允许创建数据库、允许创建角色、有密码
+密码：123456
+
+pkg_add -r phppgadmin
+
+添加postgresql数据库的远程连接
+修改 /usr/local/pgsql/data/pg_hba.conf
+# IPv4 local connections:
+host    all             all             192.168.1.1/24            trust
+
+修改 /usr/local/pgsql/data/postgresql.conf
+listen_addresses = '*'
+port = 5432
+
+然后 
+su pgsqldb 切换用户后
+pg_ctl stop -D /usr/local/pgsql/data //停止服务
+pg_ctl start -D /usr/local/pgsql/data  //启动服务
+

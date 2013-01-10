@@ -1,0 +1,77 @@
+IPFireWall
+在内核已经编译的模块，默认是
+options    IPFIREWALL_DEFAULT_TO_ACCEPT 的
+
+ipfw的配置命令：ipfw [-N] 命令 [编号] 动作 [log(日志)] 协议 地址 [其它选项]
+
+
+/etc/rc.conf 配置系统启动防火墙
+gateway_enable="YES" 	# 启动网关 
+firewall_enable="YES" 	# 激活firewall防火墙 
+firewall_script="/etc/ipfw.conf" 	# firewall防火墙的默认脚本 
+firewall_type="open" 		# firewall自定义脚本 
+	//firewall_type可以设置成系统默认的open/client/simple/closed等，也可以
+	//设置成用户自己的脚本路径
+firewall_quiet="NO" 	# 起用脚本时，是否显示规则信息。现在为“NO”假如你的防火墙脚本已经定型，那么就可以把这里设置成“YES”了
+firewall_logging_enable="YES" 		# 启用firewall的log记录 
+
+
+/etc/syslog.conf培植日志文件
+!ipfw 
+*.*                  /var/log/ipfw.log 
+
+
+firewall防火墙的默认脚本 
+/etc/rc.firewall
+
+
+
+firewall 自定义脚本 
+/etc/ipfw.conf
+#!/usr/local/bin/bash
+cmd="ipfw -q add"
+my_ip="192.168.1.4"
+local_mask="192.168.1.0/24"
+nc_in="r11"
+nc_out="r10"
+ipfw -q -f flush
+
+#Allow all via loopback to loopback
+$cmd 00500 allow all from any to any via lo0
+
+$cmd 00600 check-state
+
+
+###############DNS#################################
+##### As DNS Client
+$cmd 00801 allow udp from me to any 53 out
+$cmd 00802 allow udp from any 53 to me in
+##### As DNS Server
+$cmd 00802 allow udp from me 53 to $local_mask out
+$cmd 00803 allow udp from $local_mask to me 53 in
+
+###############FTP,SSH,WWW,and etc.################
+$cmd 01000  allow tcp from $local_mask to me 20,21,22,80,443
+$cmd 01500  allow tcp from me 20,21,22,80,443 to $local_mask
+
+###############ICMP################################
+$cmd 00903 allow icmp from any to any icmptypes 3
+$cmd 00904 allow icmp from any to any icmptypes 4
+
+##### As Client to ping others
+$cmd 00905 allow icmp from me to any icmptypes 8 out 	##ping cmd
+$cmd 00906 allow icmp from any to me icmptypes 0 in  	##ping cmd
+
+##### As Server to be pinged!
+$cmd 00907 allow icmp from $local_mask to me icmptypes 8 in 	##ping cmd
+$cmd 00908 allow icmp from $local_mask to any icmptypes 0 out  	##ping cmd
+
+$cmd 00909 allow icmp from any to any icmptypes 11 in  		##traceroute cmd
+$cmd 00909 allow icmp from any to any icmptypes 11 out  	##traceroute cmd
+
+### 这里需要注意的是，BSD的tarceroute是使用UDP实现的
+
+################FTP################################
+$cmd 01600  allow all from any to any 20,21,50000-50900
+$cmd 01700  allow all from any 20,21,50000-50900 to any
+

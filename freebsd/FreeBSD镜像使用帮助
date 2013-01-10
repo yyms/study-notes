@@ -1,0 +1,36 @@
+FreeBSD镜像使用帮助
+
+收录架构
+
+i386
+amd64
+source
+收录版本
+
+isos all
+ports all
+packages 7-stable or later
+更新时间
+
+每12小时更新一次
+
+使用说明
+
+Packages使用方法: 以FreeBSD 8.1 i386为例, 在终端下执行以下命令(操作前请做好相应备份)
+
+    setenv PACKAGESITE http://mirrors.163.com/FreeBSD/releases/i386/8.1-RELEASE/packages/Latest/
+    pkg_add -r package #package为要安装的软件名
+Ports使用方法: 以安装firefox为例, 编辑/etc/make.conf文件, 修改MASTER_SITE_BACKUP字段(操作前请做好相应备份)
+
+    MASTER_SITE_BACKUP?=http://mirrors.163.com/FreeBSD/distfiles/${DIST_SUBDIR}/
+    MASTER_SITE_OVERRIDE?=${MASTER_SITE_BACKUP}
+然后在/usr/ports/www/firefox目录下执行以下命令(要先安装ports)
+
+    make
+    make install
+相关链接
+
+官方主页: http://www.freebsd.org/
+邮件列表: http://www.freebsd.org/community/mailinglists.html
+论坛: http://forums.freebsd.org/
+手册: http://www.freebsd.org/doc/zh_CN/books/handbook

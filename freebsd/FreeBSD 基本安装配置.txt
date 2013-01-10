@@ -1,0 +1,67 @@
+setenv PACKAGESITE http://mirrors.163.com/FreeBSD/releases/amd64/8.2-RELEASE/packages/Latest/ 
+export PACKAGESITE=http://mirrors.163.com/FreeBSD/releases/amd64/8.2-RELEASE/packages/Latest/ 
+
+pkg_add -r bash
+
+chsh -s /usr/local/bin/bash
+
+vi /etc/profile
+alias ls='ls -G'
+
+安装之后，对于使用SecureCRT 来远程登陆
+可以将对话的属性中
+Terminal -> Emulation -> 
+中，终端类型设置成xterm,选择 ANSI Color 和 use color schem 
+就可以显示彩色的截面了
+
+安装sudo
+然后使用visudo编辑文件
+taozj ALL=(ALL) NOPASSWD: ALL
+
+更新ports系统
+用ports安装软件的时候，如果没有设置相对于你来说最快的ports服务器地址，那就会默认的 
+ftp://ftp.freebsd.org/pub/FreeBSD/ports/distfiles/
+，这个地址对于很多地方来说是很慢的。 
+修改 /etc/make.conf 加入以下代码 
+MASTER_SITE_OVERRIDE=\
+ftp://ftp.freebsdchina.org/pub/FreeBSD/ports/distfiles/${DIST_SUBDIR}\
+ftp://ftp.cn.freebsd.org/pub/FreeBSD/ports/distfiles/${DIST_SUBDIR}\
+ftp://ftp.tw.freebsd.org/pub/FreeBSD/ports/distfiles/${DIST_SUBDIR}
+
+如果你有最快的地址，可以加到上面去，下载就会块了 
+#vim /etc/make.conf
+加入：
+FETCH_CMD=wget -c -t 1
+DISABLE_SIZE=yes
+
+pkg_add -r open-vm-tools-nox11
+
+sudo mount -t cd9660 /dev/acd0 /mnt
+
+/usr/local/bin/vmware-config-tools.pl
+
+/usr/local/etc/rc.d/
+/sbin/mount -t vmhgfs .host:/share /mnt/hgfs
+
+vmware_guest_vmblock_enable="YES"
+vmware_guest_vmhgfs_enable="YES"
+vmware_guest_vmmemctl_enable="YES"
+vmware_guest_vmxnet_enable="YES"
+vmware_guestd_enable="YES"
+
+
+使用 portsnap 安装/同步 ports 系统
+这是推荐的方法。使用portsnap不需要事先安装 ports tree，并且能够在任何时候恢复到已知的最新状态（即使手工对ports tree进行了修改）。 
+使用 portsnap 分成两个步骤：下载压缩的 portsnap 快照，和更新现有系统。下载或更新 portsnap 快照的方法是 portsnap fetch；首次安装，或希望将 ports tree 恢复到快照的样子，应使用 portsnap extract；之后更新系统中的 ports tree，则可以通过 portsnap update 来完成。对于服务器而言，推荐在 crontab 中增加在每天3点执行 portsnap cron，以减少使用时所需要的下载时间。 
+首次下载 portsnap 快照时，需要下载一个大约50MB的快照基础文件。在中国大陆，由于网络状况的原因，这可能需要较长时间。可以考虑用 portsnap fetch -s portsnap.cn.freebsd.org 做首次下载；之后的下载，还是推荐使用正常的 portsnap fetch。 
+可以使用下面步骤完成上述情况 
+1.首先设置一个比较快的portsnap服务器，如果系统默认的地址你的访问速度也很快，可以不修改 
+#vi /etc/portsnap.conf设置SERVERNAME=portsnap.cn.freebsd.org ,你可以设置相对你速度快点的服务器的地址 
+2.执行下面命令 
+#portsnap fetch extract    这里直接下载ports并且解压这样就完成了下载ports系统以及解压到/usr下面了 
+
+sudo设置 
+安装sudo 
+pkg_add -r sudo; 
+添加sudoers 使用visudo命令来编辑/usr/local/etc/sudoers文件。
+%wheel ALL=(ALL) NOPASSWD: ALL

@@ -1,0 +1,174 @@
+openwebmail 服务器搭建
+
+1、首先安装完apache之后，安装openssl
+# cd /usr/ports/security/openssl 
+# make install 
+# make clean 
+
+2、安装 vm-pop3d 
+# cd /usr/ports/mail/vm-pop3d 
+# make install clean
+# cd /usr/local/etc/rc.d 
+# mv vm-pop3d.sh.sample vm-pop3d.sh
+
+
+3、安装使用SASL2进行Login验证的postfix
+采用的SASL2的验证方式
+auxprop - 根据auxiliary property插件提供的userPassword属性验证用户，数据库通常保存在/etc/sasldb2（freebsd下是/usr/local/etc/sasldb2.db），可以自己添加能够通过验证的邮箱名以及验证密码
+
+# cd /usr/ports/mail/postfix/ 
+# make install clean
+
+正常情况下安装Postfix的时候，就会自动安装SASL2了，如果没有安装的话，可以自己到/usr/ports/security/cyrus-sasl2下安装。注意，安装Postfix的时候，选上PCRE、SASL2、TLS、VDA；安装SASL2的时候，选上LOGIN、PLAIN、CRAM、DIGEST、OTP、NTLM（如果想要使用authdaemon方式进行验证的话，也可以将AUTHDAEMOND勾上）。
+
+使用ports安装postfix，默认情况下，只能够通过web页面发信，而不允许使用foxmail、outlook等邮件客户端发信。所以我们需要修改postfix的配置文件，以让其支持客户端SMTP发信。
+# vim /usr/local/etc/postfix/main.cf 
+在最后添加： 
+virtual_alias_maps=hash:/usr/local/etc/postfix/virtual 
+alias_maps=hash:/usr/local/etc/postfix/aliases 
+default_privs=nobody 
+allow_mail_to_commands = alias,forward,include 
+allow_mail_to_files = alias,forward,include 
+smtpd_client_restrictions = permit_sasl_authenticated 
+smtpd_sasl_auth_enable= yes 
+smtpd_recipient_restrictions = permit_mynetworks permit_sasl_authenticated reject_unauth_destination 
+smtpd_sasl_authenticated_header = yes 
+broken_sasl_auth_clients = yes 
+smtpd_sasl_path = smtpd 
+smtpd_sasl_security_options = noanonymous
+
+/////////////////////////////////////////
+smtpd_sasl_auth_enable= yes: 打开SASL验证；
+smtpd_recipient_restrictions = permit_mynetworks permit_sasl_authenticated reject_unauth_destination: 为了允许远程正常SMTP邮件客户端能够通过邮件服务器传送邮件，需要进行验证的设置
+smtpd_sasl_authenticated_header = yes: 查看消息头中的登录名
+broken_sasl_auth_clients = yes: 为了兼容旧版本Outlook所进行的设置（Postfix2.3版以后有效）
+smtpd_sasl_path = smtpd: 使用Cyrus SASL对Postfix进行验证，默认情况下，设置此项后，进行验证时，Cyrus SASL会自动去搜索配置文件/usr/local/lib/sasl2/smtp.conf。
+////////////////////////////////////////
+
+然后去配置SASL2，我们使用Login登录验证，这样不需要像authdaemond那样设置开机启动SASL的验证程序。配置文件如下：
+# vim /usr/local/lib/sasl2/smtpd.conf 
+添加如下内容： 
+pwcheck_method: auxprop 
+auxprop_plugin: sasldb 
+mech_list: PLAIN LOGIN CRAM-MD5 DIGEST-MD5
+
+这样我们就可以使用Cyrus SASL自己的存储邮箱用户名和密码的文件来进行验证。当然，刚开始的时候，SASL的这个password file（默认为/usr/local/etc/sasldb2.db）中是没有数据的，我们可以通过如下命令来添加能够通过验证的邮箱名和密码。由于我们使用虚拟域进行配置，所以我们在添加能通过验证的用户时，需要指定完整的邮箱名：
+# saslpasswd2 -c -u tzj.com admin
+这样admin@tzj.com这条数据就添加到了SASL2的验证数据库文件中了。
+我们可以通过如下命令查看这个验证数据库文件中已经有哪些用户了：
+# sasldblistusers2
+
+# cd /usr/local/etc/postfix/ 
+# vim virtual 
+在最后面添加： 
+tzj.com  anything 
+admin@tzj.com  admin.tzj.com
+然后保存退出，执行如下命令生成virtual.db虚拟域数据库: 
+# postmap virtual 
+
+# vim aliases 
+在最后面添加： 
+admin.tzj.com:/var/spool/virtual/tzj.com/admin 
+然后保存退出，执行如下命令生成aliases.db别名数据库: 
+# postalias aliases
+
+注：同理可以添加其它域，需要注意的是，编辑/usr/local/etc/postfix/virtual以及/usr/local/etc/postfix/aliases后需要重新调用上面的postmap和postalias命令生成对应的数据库.db文件。
+
+4、安装配置Web邮件系统OpenWebmail
+# cd /usr/ports/mail/openwebmail/ 
+# make WITH_QUOTA=yes install clean
+
+# vim /usr/local/www/cgi-bin/openwebmail/etc/sites.conf/tzj.com 
+添加如下内容： 
+auth_module auth_vdomain.pl 
+auth_withdomain yes 
+mailspooldir /var/spool/virtual/tzj.com 
+use_syshomedir no 
+use_homedirspools no 
+enable_autoreply no 
+enable_setforward no 
+enable_vdomain yes 
+vdomain_admlist admin
+vdomain_maxuser 500 
+vdomain_vmpop3_pwdpath /usr/local/etc/virtual 
+vdomain_vmpop3_pwdname passwd 
+vdomain_vmpop3_mailpath /var/spool/virtual 
+vdomain_postfix_aliases /usr/local/etc/postfix/aliases 
+vdomain_postfix_virtual /usr/local/etc/postfix/virtual 
+vdomain_postfix_postalias /usr/local/sbin/postalias 
+vdomain_postfix_postmap /usr/local/sbin/postmap 
+# quota 
+quota_module quota_du.pl 
+quota_limit 104800 //set the size of mail box 
+quota_threshold 85 
+delmail_ifquotahit no 
+delfile_ifquotahit no
+
+注：其中的vdomain_admlist admin定义了这个邮箱域的第一个用户admin@tzj.com，他也是管理员用户，他登录Open Webmail后，可以在个人模板中添加新的邮箱用户
+
+# mkdir -p /var/spool/virtual/tzj.com
+# chown nobody /var/spool/virtual/tzj.com
+# chgrp mail /var/spool/virtual/tzj.com
+  
+# mkdir -p /usr/local/etc/virtual/tzj.com
+# touch /usr/local/etc/virtual/tzj.com/passwd 
+# chmod 644 /usr/local/etc/virtual/tzj.com/passwd 
+# htpasswd /usr/local/etc/virtual/tzj.com/passwd test 
+  
+# chmod 755 /usr/local/www/cgi-bin/openwebmail/etc/users 
+# sync 
+# reboot
+
+5、Apache Mail服务器的虚拟主机
+/usr/local/etc/apache22/httpd.conf
+
+<VirtualHost *:80> 
+ServerName mail.tzj.com 
+DocumentRoot "/usr/local/www" 
+DirectoryIndex /cgi-bin/openwebmail/openwebmail.pl 
+Alias /openwebmail "/usr/local/www/data/openwebmail" 
+</VirtualHost> 
+  
+<Directory "/usr/local/www/"> 
+AllowOverride All 
+Options ExecCGI 
+Order allow,deny 
+Allow from all 
+</Directory>
+
+AddHandler cgi-script .cgi .pl
+注释掉
+ScriptAlias /cgi-bin/ "/usr/local/www/apache22/cgi-bin/"
+添加
+ScriptAlias /cgi-bin/ "/usr/local/www/cgi-bin/"
+
+6、默认安装之后，不能显示图片，是因为路径问题，修改
+/usr/local/www/cgi-bin/openwebmail/etc
+将其中的ow_htmlurl              
+由/openwebmail改为/data/openwebmail
+
+7、apache www.tzj.com mail.tzj.com 虚拟主机设定
+NameVirtualHost *:80
+
+<VirtualHost *:80>
+ServerName mail.tzj.com
+DocumentRoot "/usr/local/www"
+DirectoryIndex /cgi-bin/openwebmail/openwebmail.pl
+Alias /openwebmail "/user/local/www/data/openwebmail"
+</VirtualHost>
+
+<Directory "/usr/local/www/"> 
+AllowOverride All 
+Options ExecCGI 
+Order allow,deny 
+Allow from all 
+</Directory>
+
+<VirtualHost *:80>
+ServerName www.tzj.com
+ServerAlias tzj.com
+DocumentRoot "/usr/local/www/apache22/data/"
+DirectoryIndex index.php
+</VirtualHost>
+
+
